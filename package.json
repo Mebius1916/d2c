@@ -1,21 +1,14 @@
 {
-  "name": "figma-plugin",
-  "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "build": "esbuild src/code.ts --bundle --outfile=dist/code.js --target=es6 && cp src/ui.html dist/ui.html",
-    "watch": "esbuild src/code.ts --bundle --outfile=dist/code.js --target=es6 --watch"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
   "devDependencies": {
-    "@figma/plugin-typings": "^1.122.0",
-    "esbuild": "^0.27.2",
-    "typescript": "^5.9.3"
+    "@figma/rest-api-spec": "^0.36.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.1.0",
+    "tsx": "^4.21.0"
   },
   "dependencies": {
-    "@figma-plugin/helpers": "^0.15.2"
+    "body-parser": "^2.2.2",
+    "cors": "^2.8.6",
+    "express": "^5.2.1"
   }
 }
