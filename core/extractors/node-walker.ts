@@ -1,6 +1,8 @@
 import type { Node as FigmaDocumentNode } from "@figma/rest-api-spec";
 import { isVisible } from "../utils/common.js";
 import { hasValue } from "../utils/identity.js";
+import { isIcon } from "../transformers/icon.js";
+import { isImageNode } from "../transformers/image.js";
 import type {
   ExtractorFn,
   TraversalContext,
@@ -53,7 +55,39 @@ function processNodeWithExtractors(
     return null;
   }
 
-  // Always include base metadata
+  // 1. Detect if this is an Icon (SVG)
+  // If true, we treat it as a leaf node (SVG) and do NOT traverse children
+  if (isIcon(node)) {
+    const result: SimplifiedNode = {
+      id: node.id,
+      name: node.name,
+      type: "SVG", // Mark as SVG
+      semanticTag: "icon", // Semantic hint for LLM
+    };
+    // Apply extractors to get layout/styles for the icon container itself
+    for (const extractor of extractors) {
+      extractor(node, result, context);
+    }
+    return result;
+  }
+
+  // 2. Detect if this is an Image
+  // If true, we treat it as a leaf node (IMAGE) and do NOT traverse children
+  if (isImageNode(node)) {
+    const result: SimplifiedNode = {
+      id: node.id,
+      name: node.name,
+      type: "IMAGE", // Mark as Image
+      semanticTag: "image",
+    };
+    // Apply extractors to get layout/styles (border-radius, shadow)
+    for (const extractor of extractors) {
+      extractor(node, result, context);
+    }
+    return result;
+  }
+
+  // 3. Standard Node Processing
   const result: SimplifiedNode = {
     id: node.id,
     name: node.name,

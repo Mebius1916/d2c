@@ -70,7 +70,9 @@ export interface SimplifiedDesign {
 export interface SimplifiedNode {
   id: string;
   name: string;
-  type: string; // e.g. FRAME, TEXT, INSTANCE, RECTANGLE, etc.
+  type: string; // e.g. FRAME, TEXT, INSTANCE, RECTANGLE, SVG, IMAGE etc.
+  semanticTag?: string; // e.g. "icon", "button", "input"
+  src?: string; // For IMAGE nodes
   // text
   text?: string;
   textStyle?: string;
