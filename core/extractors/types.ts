@@ -73,6 +73,13 @@ export interface SimplifiedNode {
   type: string; // e.g. FRAME, TEXT, INSTANCE, RECTANGLE, SVG, IMAGE etc.
   semanticTag?: string; // e.g. "icon", "button", "input"
   src?: string; // For IMAGE nodes
+  // Geometry for occlusion detection
+  absRect?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
   // text
   text?: string;
   textStyle?: string;

@@ -3,6 +3,8 @@ import { isVisible } from "../utils/common.js";
 import { hasValue } from "../utils/identity.js";
 import { isIcon } from "../transformers/icon.js";
 import { isImageNode } from "../transformers/image.js";
+import { removeOccludedNodes } from "./occlusion.js";
+import { mergeSpatialIcons } from "./spatial-merging.js";
 import type {
   ExtractorFn,
   TraversalContext,
@@ -36,8 +38,11 @@ export function extractFromDesign(
     .map((node) => processNodeWithExtractors(node, extractors, context, options))
     .filter((node): node is SimplifiedNode => node !== null);
 
+  // Apply Occlusion Culling: Remove nodes that are completely hidden by siblings above them
+  const visibleNodes = removeOccludedNodes(processedNodes);
+
   return {
-    nodes: processedNodes,
+    nodes: visibleNodes,
     globalVars: context.globalVars,
   };
 }
@@ -115,10 +120,16 @@ function processNodeWithExtractors(
         .filter((child): child is SimplifiedNode => child !== null);
 
       if (children.length > 0) {
+        // 1. Apply Occlusion Culling (Remove hidden nodes)
+        let processedChildren = removeOccludedNodes(children);
+
+        // 2. Apply Spatial Merging (Group scattered icon parts)
+        processedChildren = mergeSpatialIcons(processedChildren);
+
         // Allow custom logic to modify parent and control which children to include
         const childrenToInclude = options.afterChildren
-          ? options.afterChildren(node, result, children)
-          : children;
+          ? options.afterChildren(node, result, processedChildren)
+          : processedChildren;
 
         if (childrenToInclude.length > 0) {
           result.children = childrenToInclude;

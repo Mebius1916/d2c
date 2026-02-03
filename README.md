@@ -1,11 +1,11 @@
-# Figma 设计数据清洗引擎 (mcp-logic)
+# Figma 设计数据清洗引擎
 
 这是一个核心引擎模块，用于提取、清洗和标准化 Figma REST API 返回的原始 JSON 数据。它将庞大、复杂的物理设计数据转换为开发者友好的、CSS 就绪的 JSON 格式，作为 Design-to-Code (D2C) 工作流中的 ETL (提取-转换-加载) 管道。
 
 ## 📂 目录结构
 
 ```
-mcp-logic/
+core/
 ├── extractors/       # 核心遍历与提取逻辑 ("Extract" 阶段)
 │   ├── node-walker.ts      # 主 DFS (深度优先) 遍历引擎
 │   ├── built-in.ts         # 具体提取策略 (布局、样式、文本)

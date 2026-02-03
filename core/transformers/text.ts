@@ -26,8 +26,9 @@ export function hasTextStyle(
 
 // Keep other simple properties directly
 export function extractNodeText(n: FigmaDocumentNode) {
+  // @ts-ignore
   if (hasValue("characters", n, isTruthy)) {
-    return n.characters;
+    return (n as any).characters;
   }
 }
 

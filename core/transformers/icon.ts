@@ -53,8 +53,9 @@ export function isIcon(node: FigmaNode): boolean {
     return false;
   }
 
-  const width = node.absoluteBoundingBox?.width ?? 0;
-  const height = node.absoluteBoundingBox?.height ?? 0;
+  const bbox = "absoluteBoundingBox" in node ? node.absoluteBoundingBox : null;
+  const width = bbox?.width ?? 0;
+  const height = bbox?.height ?? 0;
   
   if (width === 0 || height === 0) return false; // Invisible or empty
 
