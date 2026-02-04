@@ -5,6 +5,7 @@ import { isIcon } from "../transformers/icon.js";
 import { isImageNode } from "../transformers/image.js";
 import { removeOccludedNodes } from "./occlusion.js";
 import { mergeSpatialIcons } from "./spatial-merging.js";
+import { reparentNodes } from "./reparenting.js";
 import type {
   ExtractorFn,
   TraversalContext,
@@ -40,9 +41,11 @@ export function extractFromDesign(
 
   // Apply Occlusion Culling: Remove nodes that are completely hidden by siblings above them
   const visibleNodes = removeOccludedNodes(processedNodes);
+  
+  const reconstructedNodes = reparentNodes(visibleNodes);
 
   return {
-    nodes: visibleNodes,
+    nodes: reconstructedNodes,
     globalVars: context.globalVars,
   };
 }
@@ -125,6 +128,13 @@ function processNodeWithExtractors(
 
         // 2. Apply Spatial Merging (Group scattered icon parts)
         processedChildren = mergeSpatialIcons(processedChildren);
+
+        // Note: We DO NOT run `reparentNodes` here recursively.
+        // Why? Because `reparentNodes` is designed to be a GLOBAL operation.
+        // It flattens the tree. If we run it on every subtree, we are just doing local re-parenting.
+        // But the whole point is to fix "Button is physically in Card but logically in Root".
+        // So `reparentNodes` should ONLY be called once at the very end of `walkNodes`.
+        // However, `mergeSpatialIcons` is a local operation (siblings only), so it stays here.
 
         // Allow custom logic to modify parent and control which children to include
         const childrenToInclude = options.afterChildren

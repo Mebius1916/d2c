@@ -3,19 +3,13 @@
   则将其加入可见节点数组，并且将其几何形状融合进遮罩层。
 */
 import type { SimplifiedNode } from "./types.js";
+import type { BoundingBox } from "../utils/geometry.js";
 // @ts-ignore: martinez-polygon-clipping missing types
 import * as martinez from "martinez-polygon-clipping";
 
 type Point = [number, number];
 type Polygon = Point[][];
 type MultiPolygon = Polygon[];
-
-interface BoundingBox {
-  x: number;
-  y: number;
-  width: number;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
-  height: number;
-}
 
 export function removeOccludedNodes(nodes: SimplifiedNode[]): SimplifiedNode[] {
   if (nodes.length === 0) return [];

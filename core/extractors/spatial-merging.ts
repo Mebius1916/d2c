@@ -5,13 +5,7 @@
 */
 import type { SimplifiedNode } from "./types.js";
 import { v4 as uuidv4 } from "uuid";
-
-interface BoundingBox {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+import { type BoundingBox, areRectsTouching, getUnionRect } from "../utils/geometry.js";
 
 const SPATIAL_MERGE_THRESHOLD = 80; // Max size for an icon
 const MERGE_DISTANCE = 2; // Max distance in pixels to consider "touching"
@@ -63,7 +57,7 @@ export function mergeSpatialIcons(nodes: SimplifiedNode[]): SimplifiedNode[] {
   // 并查集将符合条件的碎片合并到一个集合中
   for (let i = 0; i < candidates.length; i++) {
     for (let j = i + 1; j < candidates.length; j++) {
-      if (areTouching(candidates[i].rect, candidates[j].rect)) {
+      if (areRectsTouching(candidates[i].rect, candidates[j].rect, MERGE_DISTANCE)) {
         union(i, j);
       }
     }
@@ -111,42 +105,17 @@ function isMergeCandidate(node: SimplifiedNode): boolean {
   return true;
 }
 
-// AABB 碰撞检测
-function areTouching(a: BoundingBox, b: BoundingBox): boolean {
-  // Check for intersection or small gap
-  const gap = MERGE_DISTANCE;
-  
-  return (
-    a.x < b.x + b.width + gap &&
-    a.x + a.width + gap > b.x &&
-    a.y < b.y + b.height + gap &&
-    a.y + a.height + gap > b.y
-  );
-}
-
 // 计算所有碎片的总包围矩形
 function createMergedIconNode(parts: SimplifiedNode[]): SimplifiedNode {
-  // Calculate union bounding box
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  
-  parts.forEach(p => {
-    if (p.absRect) {
-      minX = Math.min(minX, p.absRect.x);
-      minY = Math.min(minY, p.absRect.y);
-      maxX = Math.max(maxX, p.absRect.x + p.absRect.width);
-      maxY = Math.max(maxY, p.absRect.y + p.absRect.height);
-    }
-  });
-
-  const width = maxX - minX;
-  const height = maxY - minY;
+  const rects = parts.map(p => p.absRect).filter((r): r is BoundingBox => !!r);
+  const unionRect = getUnionRect(rects);
   
   return {
     id: `virtual-group-${uuidv4()}`, // Virtual ID
     name: "Merged Icon",
     type: "GROUP", // It's a group of vectors
     semanticTag: "icon", // Tell LLM it's an icon
-    absRect: { x: minX, y: minY, width, height },
+    absRect: unionRect,
     children: parts,
   };
 }

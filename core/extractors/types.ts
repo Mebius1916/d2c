@@ -96,6 +96,7 @@ export interface SimplifiedNode {
   borderRadius?: string;
   // layout & alignment
   layout?: string;
+  layoutMode?: "absolute" | "relative"; // Inferred layout positioning
   // for rect-specific strokes, etc.
   componentId?: string;
   componentProperties?: ComponentProperties[];
