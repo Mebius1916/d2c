@@ -6,6 +6,7 @@ import { isImageNode } from "../transformers/image.js";
 import { removeOccludedNodes } from "./occlusion.js";
 import { mergeSpatialIcons } from "./spatial-merging.js";
 import { reparentNodes } from "./reparenting.js";
+import { groupNodesByLayout } from "./layout-grouping.js";
 import type {
   ExtractorFn,
   TraversalContext,
@@ -44,8 +45,29 @@ export function extractFromDesign(
   
   const reconstructedNodes = reparentNodes(visibleNodes);
 
+  // Apply Layout Grouping: Recursively infer Flexbox rows/cols
+  // We need to apply this to the reconstructed tree.
+  function applyLayoutGroupingToTree(nodes: SimplifiedNode[]): SimplifiedNode[] {
+    // 1. Process children first (bottom-up) or top-down?
+    // groupNodesByLayout processes a list of siblings. 
+    // It recursively calls itself on groups it creates.
+    // BUT, it doesn't automatically traverse into *existing* children of the input nodes.
+    // So we need to traverse.
+    
+    nodes.forEach(node => {
+      if (node.children && node.children.length > 0) {
+        node.children = applyLayoutGroupingToTree(node.children);
+      }
+    });
+
+    // 2. Process current level
+    return groupNodesByLayout(nodes);
+  }
+
+  const groupedNodes = applyLayoutGroupingToTree(reconstructedNodes);
+
   return {
-    nodes: reconstructedNodes,
+    nodes: groupedNodes,
     globalVars: context.globalVars,
   };
 }
