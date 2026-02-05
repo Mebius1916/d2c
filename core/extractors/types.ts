@@ -102,6 +102,8 @@ export interface SimplifiedNode {
   componentProperties?: ComponentProperties[];
   // children
   children?: SimplifiedNode[];
+  // visual fingerprint for list inference
+  visualSignature?: string;
 }
 
 export interface BoundingBox {

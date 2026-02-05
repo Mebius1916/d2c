@@ -9,8 +9,8 @@
      计算行列组面积的方差，方差越小，说明元素的面积越相似。
 */
 import type { SimplifiedNode } from "./types.js";
-import { v4 as uuidv4 } from "uuid";
 import { getUnionRect, type BoundingBox } from "../utils/geometry.js";
+import { createVirtualFrame } from "../utils/virtual-node.js";
 
 export function groupNodesByLayout(nodes: SimplifiedNode[]): SimplifiedNode[] {
   // 排除绝对定位的节点
@@ -219,21 +219,15 @@ function getEnd(node: SimplifiedNode, axis: "x" | "y"): number {
 }
 
 function createVirtualContainer(children: SimplifiedNode[], direction: "row" | "column"): SimplifiedNode {
-  const rects = children.map(c => c.absRect).filter((r): r is BoundingBox => !!r);
-  const unionRect = getUnionRect(rects);
-
-  return {
-    id: `virtual-layout-${uuidv4()}`,
+  return createVirtualFrame({
     name: direction === "row" ? "Row" : "Column",
     type: "FRAME",
-    layoutMode: "relative",
     layout: {
       layoutMode: direction === "row" ? "HORIZONTAL" : "VERTICAL",
       primaryAxisAlignItems: "MIN",
       counterAxisAlignItems: "MIN",
       itemSpacing: 0,
-    } as any,
-    absRect: unionRect,
-    children: children,
-  };
+    },
+    children: children
+  });
 }

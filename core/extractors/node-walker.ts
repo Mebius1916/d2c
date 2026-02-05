@@ -7,6 +7,7 @@ import { removeOccludedNodes } from "./occlusion.js";
 import { mergeSpatialIcons } from "./spatial-merging.js";
 import { reparentNodes } from "./reparenting.js";
 import { groupNodesByLayout } from "./layout-grouping.js";
+import { inferListPatterns } from "./list-inference.js";
 import type {
   ExtractorFn,
   TraversalContext,
@@ -64,10 +65,21 @@ export function extractFromDesign(
     return groupNodesByLayout(nodes);
   }
 
+  // Apply List Inference: Recursively detect repetitive patterns
+  function applyListInferenceToTree(nodes: SimplifiedNode[]): SimplifiedNode[] {
+    nodes.forEach(node => {
+      if (node.children && node.children.length > 0) {
+        node.children = applyListInferenceToTree(node.children);
+      }
+    });
+    return inferListPatterns(nodes);
+  }
+
   const groupedNodes = applyLayoutGroupingToTree(reconstructedNodes);
+  const listNodes = applyListInferenceToTree(groupedNodes);
 
   return {
-    nodes: groupedNodes,
+    nodes: listNodes,
     globalVars: context.globalVars,
   };
 }
