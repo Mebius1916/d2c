@@ -7,8 +7,8 @@
   如果 A 和 B 重叠，则贪心判断面积小的为绝对布局节点。
 
  */
-import type { SimplifiedNode } from "./types.js";
-import { getRectArea, isRectContained, areRectsTouching } from "../utils/geometry.js";
+import type { SimplifiedNode } from "../types.js";
+import { getRectArea, isRectContained, areRectsTouching } from "../../utils/geometry.js";
 
 export function reparentNodes(rootNodes: SimplifiedNode[]): SimplifiedNode[] {
   const flatNodes: SimplifiedNode[] = [];

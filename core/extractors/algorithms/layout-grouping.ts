@@ -8,11 +8,19 @@
   2. 相似度代价 (Similarity Cost)：
      计算行列组面积的方差，方差越小，说明元素的面积越相似。
 */
-import type { SimplifiedNode } from "./types.js";
-import { getUnionRect, type BoundingBox } from "../utils/geometry.js";
-import { createVirtualFrame } from "../utils/virtual-node.js";
+import type { SimplifiedNode } from "../types.js";
+import { getUnionRect, type BoundingBox } from "../../utils/geometry.js";
+import { createVirtualFrame } from "./utils/virtual-node.js";
+import { calculateLayoutGap } from "./utils/dynamic-threshold.js";
 
 export function groupNodesByLayout(nodes: SimplifiedNode[]): SimplifiedNode[] {
+  // 0. Recursively process children first (Bottom-Up Traversal)
+  nodes.forEach(node => {
+    if (node.children && node.children.length > 0) {
+      node.children = groupNodesByLayout(node.children);
+    }
+  });
+
   // 排除绝对定位的节点
   const flowNodes = nodes.filter(n => n.layoutMode !== "absolute");
   const absoluteNodes = nodes.filter(n => n.layoutMode === "absolute");
@@ -23,12 +31,8 @@ export function groupNodesByLayout(nodes: SimplifiedNode[]): SimplifiedNode[] {
 
   // 计算动态 GAP 阈值
   // 逻辑：取平均尺寸的 5% 作为最小间隙，且不小于 2px。
-  // 如果是切行 (Y轴)，参考平均高度；如果是切列 (X轴)，参考平均宽度。
-  const avgWidth = flowNodes.reduce((sum, n) => sum + (n.absRect?.width || 0), 0) / flowNodes.length;
-  const avgHeight = flowNodes.reduce((sum, n) => sum + (n.absRect?.height || 0), 0) / flowNodes.length;
-  
-  const gapX = Math.max(2, avgWidth * 0.05);
-  const gapY = Math.max(2, avgHeight * 0.05);
+  const gapX = calculateLayoutGap(flowNodes, "x");
+  const gapY = calculateLayoutGap(flowNodes, "y");
 
   // 1. 试探性切割：同时尝试 X 轴和 Y 轴
   const rowGroups = splitByProjection(flowNodes, "y", gapY);

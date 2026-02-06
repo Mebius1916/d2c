@@ -3,9 +3,10 @@
     通过并查集算法将所有有关系的碎片节点聚集为一个集合，
     然后将这个集合合并为一个虚拟的图标节点，然后插入到原始节点列表中（不保留原始碎片节点）
 */
-import type { SimplifiedNode } from "./types.js";
-import { v4 as uuidv4 } from "uuid";
-import { type BoundingBox, areRectsTouching, getUnionRect } from "../utils/geometry.js";
+import type { SimplifiedNode } from "../types.js";
+import { createVirtualFrame } from "./utils/virtual-node.js";
+import { type BoundingBox, areRectsTouching } from "../../utils/geometry.js";
+import { UnionFind } from "./utils/union-find.js";
 
 const SPATIAL_MERGE_THRESHOLD = 80; // Max size for an icon
 const MERGE_DISTANCE = 2; // Max distance in pixels to consider "touching"
@@ -39,39 +40,24 @@ export function mergeSpatialIcons(nodes: SimplifiedNode[]): SimplifiedNode[] {
   if (candidates.length < 2) return nodes;
 
   // 2. Clustering using Union-Find
-  const parent = new Array(candidates.length).fill(0).map((_, i) => i);
-
-  function find(i: number): number {
-    if (parent[i] === i) return i;
-    return (parent[i] = find(parent[i]));
-  }
-
-  function union(i: number, j: number) {
-    const rootI = find(i);
-    const rootJ = find(j);
-    if (rootI !== rootJ) {
-      parent[rootI] = rootJ;
-    }
-  }
+  const uf = new UnionFind(candidates.length);
 
   // 并查集将符合条件的碎片合并到一个集合中
   for (let i = 0; i < candidates.length; i++) {
     for (let j = i + 1; j < candidates.length; j++) {
       if (areRectsTouching(candidates[i].rect, candidates[j].rect, MERGE_DISTANCE)) {
-        union(i, j);
+        uf.union(i, j);
       }
     }
   }
 
   // 3. Group by cluster
+  const groupIndices = uf.getGroups();
   const clusters = new Map<number, typeof candidates>();
-  // 找到并查集 root 节点
-  for (let i = 0; i < candidates.length; i++) {
-    const root = find(i);
-    if (!clusters.has(root)) {
-      clusters.set(root, []);
-    }
-    clusters.get(root)!.push(candidates[i]);
+  
+  for (const [root, indices] of groupIndices) {
+    const parts = indices.map(idx => candidates[idx]);
+    clusters.set(root, parts);
   }
 
   // 4. 恢复节点列表原始排序（不合法节点保持原位置）
@@ -107,15 +93,11 @@ function isMergeCandidate(node: SimplifiedNode): boolean {
 
 // 计算所有碎片的总包围矩形
 function createMergedIconNode(parts: SimplifiedNode[]): SimplifiedNode {
-  const rects = parts.map(p => p.absRect).filter((r): r is BoundingBox => !!r);
-  const unionRect = getUnionRect(rects);
-  
-  return {
-    id: `virtual-group-${uuidv4()}`, // Virtual ID
+  return createVirtualFrame({
     name: "Merged Icon",
-    type: "GROUP", // It's a group of vectors
-    semanticTag: "icon", // Tell LLM it's an icon
-    absRect: unionRect,
+    type: "GROUP",
+    semanticTag: "icon",
     children: parts,
-  };
+    layoutMode: "relative"
+  });
 }

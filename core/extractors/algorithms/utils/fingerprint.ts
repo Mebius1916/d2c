@@ -2,7 +2,8 @@
   根据节点与其子节点的类型、语义标签、尺寸、关键样式（颜色、字号、圆角）
   以及递归结构指纹，生成唯一的视觉 Hash，并且做了模糊处理。
  */
-import type { SimplifiedNode } from "../extractors/types.js";
+import type { SimplifiedNode } from "../../types.js";
+import { quantizeSize } from "./dynamic-threshold.js";
 
 export function generateVisualSignature(node: SimplifiedNode): string {
   const parts: string[] = [];
@@ -59,19 +60,3 @@ function hashString(str: string): string {
   return hash.toString(16);
 }
 
-/**
- * 分段量化尺寸 (Tiered Quantization)
- * 工业级 D2C 的最佳实践：避免单一阈值导致的过拟合或欠拟合
- */
-function quantizeSize(val: number): number {
-  if (val < 50) {
-    // 小元素 (Icon, Badge): 高精度，2px 容错
-    return Math.round(val / 2) * 2;
-  } else if (val < 200) {
-    // 中元素 (Button, Avatar): 中等精度，5px 容错
-    return Math.round(val / 5) * 5;
-  } else {
-    // 大元素 (Card, Image): 低精度，10px 容错
-    return Math.round(val / 10) * 10;
-  }
-}

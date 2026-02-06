@@ -1,85 +1,6 @@
-import fs from "fs";
-import path from "path";
+import { v4 as uuidv4 } from "uuid";
 
 export type StyleId = `${string}_${string}` & { __brand: "StyleId" };
-
-/**
- * Download Figma image and save it locally
- * @param fileName - The filename to save as
- * @param localPath - The local path to save to
- * @param imageUrl - Image URL (images[nodeId])
- * @returns A Promise that resolves to the full file path where the image was saved
- * @throws Error if download fails
- */
-export async function downloadFigmaImage(
-  fileName: string,
-  localPath: string,
-  imageUrl: string,
-): Promise<string> {
-  try {
-    // Ensure local path exists
-    if (!fs.existsSync(localPath)) {
-      fs.mkdirSync(localPath, { recursive: true });
-    }
-
-    // Build the complete file path
-    const fullPath = path.join(localPath, fileName);
-
-    // Use fetch to download the image
-    const response = await fetch(imageUrl, {
-      method: "GET",
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to download image: ${response.statusText}`);
-    }
-
-    // Create write stream
-    const writer = fs.createWriteStream(fullPath);
-
-    // Get the response as a readable stream and pipe it to the file
-    const reader = response.body?.getReader();
-    if (!reader) {
-      throw new Error("Failed to get response body");
-    }
-
-    return new Promise((resolve, reject) => {
-      // Process stream
-      const processStream = async () => {
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) {
-              writer.end();
-              break;
-            }
-            writer.write(value);
-          }
-        } catch (err) {
-          writer.end();
-          fs.unlink(fullPath, () => {});
-          reject(err);
-        }
-      };
-
-      // Resolve only when the stream is fully written
-      writer.on("finish", () => {
-        resolve(fullPath);
-      });
-
-      writer.on("error", (err) => {
-        reader.cancel();
-        fs.unlink(fullPath, () => {});
-        reject(new Error(`Failed to write image: ${err.message}`));
-      });
-
-      processStream();
-    });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(`Error downloading image: ${errorMessage}`);
-  }
-}
 
 /**
  * Remove keys with empty arrays or empty objects from an object.
@@ -125,20 +46,12 @@ export function removeEmptyKeys<T>(input: T): T {
 }
 
 /**
- * Generate a 6-character random variable ID
+ * Generate a UUID v4 variable ID
  * @param prefix - ID prefix
- * @returns A 6-character random ID string with prefix
+ * @returns A UUID string with prefix
  */
 export function generateVarId(prefix: string = "var"): StyleId {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let result = "";
-
-  for (let i = 0; i < 6; i++) {
-    const randomIndex = Math.floor(Math.random() * chars.length);
-    result += chars[randomIndex];
-  }
-
-  return `${prefix}_${result}` as StyleId;
+  return `${prefix}_${uuidv4()}` as StyleId;
 }
 
 /**
@@ -198,8 +111,10 @@ export function generateCSSShorthand(
  * @param element - The item to check
  * @returns True if the item is visible, false otherwise
  */
-export function isVisible(element: { visible?: boolean }): boolean {
-  return element.visible ?? true;
+export function isVisible(element: { visible?: boolean; opacity?: number }): boolean {
+  if (element.visible === false) return false;
+  if (element.opacity !== undefined && element.opacity === 0) return false;
+  return true;
 }
 
 /**

@@ -6,17 +6,19 @@ import type {
   ComponentSet,
   Style,
 } from "@figma/rest-api-spec";
-import { simplifyComponents, simplifyComponentSets } from "../transformers/component.js";
-import { isVisible } from "../utils/common.js";
-import type { ExtractorFn, TraversalOptions, SimplifiedDesign, TraversalContext } from "./types.js";
+import { simplifyComponents, simplifyComponentSets } from "../../transformers/component.js";
+import { isVisible } from "../../utils/common.js";
+import type { ExtractorFn, TraversalOptions, SimplifiedDesign, TraversalContext, SimplifiedNode } from "../types.js";
 import { extractFromDesign } from "./node-walker.js";
+import { allExtractors } from "../attributes/built-in.js";
+import { flattenRedundantNodes } from "../algorithms/flattening.js";
 
 /**
  * Extract a complete SimplifiedDesign from raw Figma API response using extractors.
  */
 export function simplifyRawFigmaObject(
   apiResponse: GetFileResponse | GetFileNodesResponse,
-  nodeExtractors: ExtractorFn[],
+  nodeExtractors: ExtractorFn[] = allExtractors,
   options: TraversalOptions = {},
 ): SimplifiedDesign {
   // Extract components, componentSets, and raw nodes from API response
@@ -32,14 +34,30 @@ export function simplifyRawFigmaObject(
     globalVars,
   );
 
+  // Run structure optimization: Flatten redundant groups
+  const optimizedNodes = flattenRedundantNodes(extractedNodes, { styles: finalGlobalVars.styles });
+
   // Return complete design
   return {
     ...metadata,
-    nodes: extractedNodes,
+    nodes: cleanupNodes(optimizedNodes),
     components: simplifyComponents(components),
     componentSets: simplifyComponentSets(componentSets),
     globalVars: { styles: finalGlobalVars.styles },
   };
+}
+
+/**
+ * Remove internal properties like visualSignature from nodes before output
+ */
+function cleanupNodes(nodes: SimplifiedNode[]): SimplifiedNode[] {
+  return nodes.map(node => {
+    const { visualSignature, ...rest } = node as any;
+    if (rest.children) {
+      rest.children = cleanupNodes(rest.children);
+    }
+    return rest as SimplifiedNode;
+  });
 }
 
 /**
