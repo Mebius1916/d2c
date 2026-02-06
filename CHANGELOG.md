@@ -1,5 +1,39 @@
 # 更新日志 (CHANGELOG)
 
+## [v0.1.8] - 2026-02-06
+
+### 架构重构与算法增强
+
+> **核心变更**:
+>
+> - **文件结构重组**: 按职责划分为 `algorithms`, `attributes`, `pipeline`，并将工具函数下沉，显著提升代码可维护性。
+> - **遮挡检测重写**: 弃用多边形裁剪库，改用 AABB 包围盒检测，大幅提升鲁棒性。
+> - **输出净化**: 自动清理内部指纹字段，修复节点丢失问题。
+> - **结构优化**: 新增冗余层级扁平化算法。
+
+- **冗余层级扁平化 (Flatten Redundant Groups)**:
+  - **背景**: 消除为了 Auto Layout 而产生的无意义嵌套容器，解决“div 地狱”问题。
+  - **逻辑**: 递归识别并提升仅含单子节点且无样式/无布局影响的 Frame/Group。
+
+- **遮挡剔除算法升级 (Occlusion Culling v2)**:
+  - **背景**: 原 `martinez-polygon-clipping` 库在处理空数组或特定几何时易崩溃，且性能开销大。
+  - **改进**:
+    - **移除依赖**: 彻底移除 `martinez-polygon-clipping`。
+    - **AABB 检测**: 采用 Axis-Aligned Bounding Box (矩形包围盒) 算法进行遮挡判定。
+    - **鲁棒性**: 修复了因 `absRect` 缺失导致所有节点被误判为遮挡的 Bug。
+
+- **工程化重构 (Architecture Refactor)**:
+  - **模块化**: 将 `core/extractors` 拆分为：
+    - `algorithms/`: 核心布局推断算法 (Clustering, List, Occlusion...)
+    - `attributes/`: 属性提取器 (Layout, Text, Visuals...)
+    - `pipeline/`: 调度流水线 (DesignExtractor, NodeWalker...)
+  - **工具库下沉**: 将通用 Utils 移至 `core/utils`，业务 Utils 下沉至各模块内部，实现高内聚。
+
+- **输出质量优化 (Output Polish)**:
+  - **数据完整性**: 修复 `layoutExtractor` 逻辑，确保 `absRect` 正确回填，保证后续算法链正常运行。
+  - **字段净化**: 输出前自动剔除 `visualSignature` 等内部调试字段，产出纯净 JSON。
+  - **测试增强**: `run-test.ts` 支持自动识别并解包嵌套的 API 响应格式。
+
 ## [v0.1.7] - 2026-02-05
 
 ### 元素相邻成组
