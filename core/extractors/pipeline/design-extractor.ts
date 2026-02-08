@@ -7,8 +7,7 @@ import type {
   Style,
 } from "@figma/rest-api-spec";
 import { simplifyComponents, simplifyComponentSets } from "../../transformers/component.js";
-import { isVisible } from "../../utils/common.js";
-import type { ExtractorFn, TraversalOptions, SimplifiedDesign, TraversalContext, SimplifiedNode } from "../types.js";
+import type { ExtractorFn, SimplifiedDesign, TraversalContext, SimplifiedNode } from "../types.js";
 import { extractFromDesign } from "./node-walker.js";
 import { allExtractors } from "../attributes/built-in.js";
 import { flattenRedundantNodes } from "../algorithms/flattening.js";
@@ -19,7 +18,6 @@ import { flattenRedundantNodes } from "../algorithms/flattening.js";
 export function simplifyRawFigmaObject(
   apiResponse: GetFileResponse | GetFileNodesResponse,
   nodeExtractors: ExtractorFn[] = allExtractors,
-  options: TraversalOptions = {},
 ): SimplifiedDesign {
   // Extract components, componentSets, and raw nodes from API response
   const { metadata, rawNodes, components, componentSets, extraStyles } =
@@ -30,7 +28,6 @@ export function simplifyRawFigmaObject(
   const { nodes: extractedNodes, globalVars: finalGlobalVars } = extractFromDesign(
     rawNodes,
     nodeExtractors,
-    options,
     globalVars,
   );
 
@@ -83,7 +80,7 @@ function parseAPIResponse(data: GetFileResponse | GetFileNodesResponse) {
         Object.assign(extraStyles, nodeResponse.styles);
       }
     });
-    nodesToParse = nodeResponses.map((n) => n.document).filter(isVisible);
+    nodesToParse = nodeResponses.map((n) => n.document);
   } else {
     // GetFileResponse
     Object.assign(aggregatedComponents, data.components);
@@ -91,7 +88,7 @@ function parseAPIResponse(data: GetFileResponse | GetFileNodesResponse) {
     if (data.styles) {
       extraStyles = data.styles;
     }
-    nodesToParse = data.document.children.filter(isVisible);
+    nodesToParse = data.document.children;
   }
 
   const { name } = data;

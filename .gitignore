@@ -2,4 +2,5 @@
 run-test.ts
 test-result.json
 test.json
+output.html
 .npmrc

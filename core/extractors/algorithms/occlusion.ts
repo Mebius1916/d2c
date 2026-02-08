@@ -1,6 +1,5 @@
 import type { SimplifiedNode } from "../types.js";
 import type { BoundingBox } from "../../utils/geometry.js";
-import { isVisible } from "../../utils/common.js";
 import { isRectContained } from "../../utils/geometry.js";
 
 export function removeOccludedNodes(nodes: SimplifiedNode[]): SimplifiedNode[] {
@@ -56,7 +55,7 @@ function getNodeBoundingBox(node: SimplifiedNode): BoundingBox | null {
 
 // Check if node is opaque (blocks vision)
 function isOpaque(node: SimplifiedNode): boolean {
-  if (!isVisible(node)) return false;
+  // Note: We assume node is visible because it passed the pipeline filters
   if (node.type === "TEXT") return false;
   if (node.type === "SVG") return false;
   

@@ -1,4 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
+import type { Node as FigmaDocumentNode } from "@figma/rest-api-spec";
+import type { TraversalContext } from "../extractors/types.js";
 
 export type StyleId = `${string}_${string}` & { __brand: "StyleId" };
 
@@ -48,84 +50,62 @@ export function removeEmptyKeys<T>(input: T): T {
 /**
  * Generate a UUID v4 variable ID
  * @param prefix - ID prefix
- * @returns A UUID string with prefix
  */
-export function generateVarId(prefix: string = "var"): StyleId {
-  return `${prefix}_${uuidv4()}` as StyleId;
+export function generateVarId(prefix: string): string {
+  // Use crypto.randomUUID if available (Node.js/Modern Browsers), fallback to uuidv4
+  // In our environment we use uuid package
+  return `${prefix}_${uuidv4().replace(/-/g, "").slice(0, 8)}`;
 }
 
 /**
- * Generate a CSS shorthand for values that come with top, right, bottom, and left
- *
- * input: { top: 10, right: 10, bottom: 10, left: 10 }
- * output: "10px"
- *
- * input: { top: 10, right: 20, bottom: 10, left: 20 }
- * output: "10px 20px"
- *
- * input: { top: 10, right: 20, bottom: 30, left: 40 }
- * output: "10px 20px 30px 40px"
- *
- * @param values - The values to generate the shorthand for
- * @returns The generated shorthand
+ * Check if a Figma node is visible
+ */
+export function isVisible(node: any): boolean {
+  return node.visible !== false;
+}
+
+/**
+ * Round a pixel value to 2 decimal places to avoid floating point errors
+ */
+export function pixelRound(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+/**
+ * Generate CSS shorthand string for padding/margin/stroke
+ * Supports object input: { top, right, bottom, left }
+ * Or individual args: (top, right, bottom, left)
  */
 export function generateCSSShorthand(
-  values: {
-    top: number;
-    right: number;
-    bottom: number;
-    left: number;
-  },
-  {
-    ignoreZero = true,
-    suffix = "px",
-  }: {
-    /**
-     * If true and all values are 0, return undefined. Defaults to true.
-     */
-    ignoreZero?: boolean;
-    /**
-     * The suffix to add to the shorthand. Defaults to "px".
-     */
-    suffix?: string;
-  } = {},
-) {
-  const { top, right, bottom, left } = values;
-  if (ignoreZero && top === 0 && right === 0 && bottom === 0 && left === 0) {
-    return undefined;
+  arg1: number | { top?: number; right?: number; bottom?: number; left?: number },
+  arg2?: number,
+  arg3?: number,
+  arg4?: number,
+  unit = "px"
+): string {
+  let top = 0,
+    right = 0,
+    bottom = 0,
+    left = 0;
+
+  if (typeof arg1 === "object" && arg1 !== null) {
+    top = arg1.top ?? 0;
+    right = arg1.right ?? 0;
+    bottom = arg1.bottom ?? 0;
+    left = arg1.left ?? 0;
+  } else if (typeof arg1 === "number") {
+    top = arg1;
+    right = arg2 ?? 0;
+    bottom = arg3 ?? 0;
+    left = arg4 ?? 0;
   }
-  if (top === right && right === bottom && bottom === left) {
-    return `${top}${suffix}`;
+
+  if (top === right && top === bottom && top === left) {
+    return `${top}${unit}`;
   }
-  if (right === left) {
-    if (top === bottom) {
-      return `${top}${suffix} ${right}${suffix}`;
-    }
-    return `${top}${suffix} ${right}${suffix} ${bottom}${suffix}`;
+  if (top === bottom && right === left) {
+    return `${top}${unit} ${right}${unit}`;
   }
-  return `${top}${suffix} ${right}${suffix} ${bottom}${suffix} ${left}${suffix}`;
+  return `${top}${unit} ${right}${unit} ${bottom}${unit} ${left}${unit}`;
 }
 
-/**
- * Check if an element is visible
- * @param element - The item to check
- * @returns True if the item is visible, false otherwise
- */
-export function isVisible(element: { visible?: boolean; opacity?: number }): boolean {
-  if (element.visible === false) return false;
-  if (element.opacity !== undefined && element.opacity === 0) return false;
-  return true;
-}
-
-/**
- * Rounds a number to two decimal places, suitable for pixel value processing.
- * @param num The number to be rounded.
- * @returns The rounded number with two decimal places.
- * @throws TypeError If the input is not a valid number
- */
-export function pixelRound(num: number): number {
-  if (isNaN(num)) {
-    throw new TypeError(`Input must be a valid number`);
-  }
-  return Number(Number(num).toFixed(2));
-}
