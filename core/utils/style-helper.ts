@@ -1,4 +1,4 @@
-import type { GlobalVars, StyleTypes, TraversalContext } from "../extractors/types.js";
+import type { GlobalVars, StyleTypes, TraversalContext } from "../types/extractor-types.js";
 import { generateVarId } from "./common.js";
 import { hasValue } from "./identity.js";
 import type { Node as FigmaDocumentNode } from "@figma/rest-api-spec";

@@ -2,15 +2,15 @@ import type { Node as FigmaDocumentNode } from "@figma/rest-api-spec";
 import { hasValue } from "../../utils/identity.js";
 import { runReconstructionPipeline } from "./reconstruction.js";
 import { normalizeNodeType } from "../algorithms/node-normalization.js";
+import { allExtractors } from "../attributes/built-in.js";
+import { isNodeEmpty } from "../../utils/node-check.js";
 import type {
-  ExtractorFn,
   TraversalContext,
   SimplifiedNode,
-} from "../types.js";
+} from "../../types/extractor-types.js";
 
 export function processNodeWithExtractors(
   node: FigmaDocumentNode,
-  extractors: ExtractorFn[],
   context: TraversalContext,
 ): SimplifiedNode | null {
   // 1. Normalize Node Type (Determine Semantic Role)
@@ -38,10 +38,14 @@ export function processNodeWithExtractors(
     result.semanticTag = "image";
   }
 
-  // 3. Apply Extractors (Common for all node types)
-  for (const extractor of extractors) {
-    extractor(node, result, context);
-  }
+  // 3. Apply Extractors (Function Composition)
+  // Collect partial results from all extractors and merge them into the result
+  const extractedProps = allExtractors.reduce((acc, extractor) => {
+    const partial = extractor(node, context);
+    return { ...acc, ...partial };
+  }, {} as Partial<SimplifiedNode>);
+
+  Object.assign(result, extractedProps);
 
   // 4. Traverse Children (Only for Containers)
   if (!isLeaf) {
@@ -53,7 +57,7 @@ export function processNodeWithExtractors(
 
     if (hasValue("children", node) && node.children.length > 0) {
       const children = node.children
-        .map((child) => processNodeWithExtractors(child, extractors, childContext))
+        .map((child) => processNodeWithExtractors(child, childContext))
         .filter((child): child is SimplifiedNode => child !== null);
 
       if (children.length > 0) {
@@ -62,6 +66,17 @@ export function processNodeWithExtractors(
         if (processedChildren.length > 0) {
           result.children = processedChildren;
         }
+      }
+    }
+  }
+
+  // 5. Early Pruning (Aggressive Pruning)
+  if (result.type === "FRAME" || result.type === "GROUP") {
+    const hasChildren = result.children && result.children.length > 0;
+    
+    if (!hasChildren) {
+      if (isNodeEmpty(result)) {
+        return null;
       }
     }
   }

@@ -7,9 +7,8 @@ import type {
   Style,
 } from "@figma/rest-api-spec";
 import { simplifyComponents, simplifyComponentSets } from "../../transformers/component.js";
-import type { ExtractorFn, SimplifiedDesign, TraversalContext, SimplifiedNode } from "../types.js";
+import type { SimplifiedDesign, TraversalContext, SimplifiedNode } from "../../types/extractor-types.js";
 import { extractFromDesign } from "./node-walker.js";
-import { allExtractors } from "../attributes/built-in.js";
 import { flattenRedundantNodes } from "../algorithms/flattening.js";
 
 /**
@@ -17,7 +16,6 @@ import { flattenRedundantNodes } from "../algorithms/flattening.js";
  */
 export function simplifyRawFigmaObject(
   apiResponse: GetFileResponse | GetFileNodesResponse,
-  nodeExtractors: ExtractorFn[] = allExtractors,
 ): SimplifiedDesign {
   // Extract components, componentSets, and raw nodes from API response
   const { metadata, rawNodes, components, componentSets, extraStyles } =
@@ -27,7 +25,6 @@ export function simplifyRawFigmaObject(
   const globalVars: TraversalContext["globalVars"] = { styles: {}, extraStyles };
   const { nodes: extractedNodes, globalVars: finalGlobalVars } = extractFromDesign(
     rawNodes,
-    nodeExtractors,
     globalVars,
   );
 

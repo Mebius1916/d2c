@@ -7,103 +7,29 @@ import type {
 } from "@figma/rest-api-spec";
 import { generateCSSShorthand, isVisible } from "../utils/common.js";
 import { hasValue, isStrokeWeights, type CSSRGBAColor, type CSSHexColor } from "../utils/identity.js";
+import type { 
+  SimplifiedFill, 
+  SimplifiedStroke, 
+  SimplifiedImageFill, 
+  SimplifiedGradientFill, 
+  SimplifiedPatternFill,
+  SimplifiedVectorPath
+} from "../types/simplified-types.js";
 
 export { CSSRGBAColor, CSSHexColor };
+export { 
+  SimplifiedFill, 
+  SimplifiedStroke, 
+  SimplifiedImageFill, 
+  SimplifiedGradientFill, 
+  SimplifiedPatternFill,
+  SimplifiedVectorPath
+};
+
 export interface ColorValue {
   hex: CSSHexColor;
   opacity: number;
 }
-
-/**
- * Simplified image fill with CSS properties and processing metadata
- *
- * This type represents an image fill that can be used as either:
- * - background-image (when parent node has children)
- * - <img> tag (when parent node has no children)
- *
- * The CSS properties are mutually exclusive based on usage context.
- */
-export type SimplifiedImageFill = {
-  type: "IMAGE";
-  imageRef: string;
-  scaleMode: "FILL" | "FIT" | "TILE" | "STRETCH";
-  /**
-   * For TILE mode, the scaling factor relative to original image size
-   */
-  scalingFactor?: number;
-
-  // CSS properties for background-image usage (when node has children)
-  backgroundSize?: string;
-  backgroundRepeat?: string;
-
-  // CSS properties for <img> tag usage (when node has no children)
-  isBackground?: boolean;
-  objectFit?: string;
-
-  // Image processing metadata (NOT for CSS translation)
-  // Used by download tools to determine post-processing needs
-  imageDownloadArguments?: {
-    /**
-     * Whether image needs cropping based on transform
-     */
-    needsCropping: boolean;
-    /**
-     * Whether CSS variables for dimensions are needed to calculate the background size for TILE mode
-     *
-     * Figma bases scalingFactor on the image's original size. In CSS, background size (as a percentage)
-     * is calculated based on the size of the container. We need to pass back the original dimensions
-     * after processing to calculate the intended background size when translated to code.
-     */
-    requiresImageDimensions: boolean;
-    /**
-     * Figma's transform matrix for Sharp processing
-     */
-    cropTransform?: Transform;
-    /**
-     * Suggested filename suffix to make cropped images unique
-     * When the same imageRef is used multiple times with different crops,
-     * this helps avoid overwriting conflicts
-     */
-    filenameSuffix?: string;
-  };
-};
-
-export type SimplifiedGradientFill = {
-  type: "GRADIENT_LINEAR" | "GRADIENT_RADIAL" | "GRADIENT_ANGULAR" | "GRADIENT_DIAMOND";
-  gradient: string;
-};
-
-export type SimplifiedPatternFill = {
-  type: "PATTERN";
-  patternSource: {
-    /**
-     * Hardcode to expect PNG for now, consider SVG detection in the future.
-     *
-     * SVG detection is a bit challenging because the nodeId in question isn't
-     * guaranteed to be included in the response we're working with. No guaranteed
-     * way to look into it and see if it's only composed of vector shapes.
-     */
-    type: "IMAGE-PNG";
-    nodeId: string;
-  };
-  backgroundRepeat: string;
-  backgroundSize: string;
-  backgroundPosition: string;
-};
-
-export type SimplifiedFill =
-  | SimplifiedImageFill
-  | SimplifiedGradientFill
-  | SimplifiedPatternFill
-  | CSSRGBAColor
-  | CSSHexColor;
-
-export type SimplifiedStroke = {
-  colors: SimplifiedFill[];
-  strokeWeight?: string;
-  strokeDashes?: number[];
-  strokeWeights?: string;
-};
 
 /**
  * Translate Figma scale modes to CSS properties based on usage context

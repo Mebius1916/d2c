@@ -2,7 +2,7 @@
   根据节点与其子节点的类型、语义标签、尺寸、关键样式（颜色、字号、圆角）
   以及递归结构指纹，生成唯一的视觉 Hash，并且做了模糊处理。
  */
-import type { SimplifiedNode } from "../../types.js";
+import type { SimplifiedNode } from "../../../types/extractor-types.js";
 import { quantizeSize } from "./dynamic-threshold.js";
 
 export function generateVisualSignature(node: SimplifiedNode): string {

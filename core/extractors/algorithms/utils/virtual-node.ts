@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
-import type { SimplifiedNode, BoundingBox } from "../../types.js";
+import type { SimplifiedNode, BoundingBox } from "../../../types/extractor-types.js";
 import { getUnionRect } from "../../../utils/geometry.js";
 
 export interface CreateVirtualFrameOptions {

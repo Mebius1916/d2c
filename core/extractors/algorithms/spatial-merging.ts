@@ -3,7 +3,7 @@
     通过并查集算法将所有有关系的碎片节点聚集为一个集合，
     然后将这个集合合并为一个虚拟的图标节点，然后插入到原始节点列表中（不保留原始碎片节点）
 */
-import type { SimplifiedNode } from "../types.js";
+import type { SimplifiedNode } from "../../types/extractor-types.js";
 import { createVirtualFrame } from "./utils/virtual-node.js";
 import { type BoundingBox, areRectsTouching } from "../../utils/geometry.js";
 import { UnionFind } from "./utils/union-find.js";

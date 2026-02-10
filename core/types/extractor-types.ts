@@ -1,8 +1,11 @@
 import type { Node as FigmaDocumentNode, Style } from "@figma/rest-api-spec";
-import type { SimplifiedTextStyle } from "../transformers/text.js";
-import type { SimplifiedLayout } from "../transformers/layout.js";
-import type { SimplifiedFill, SimplifiedStroke } from "../transformers/style.js";
-import type { SimplifiedEffects } from "../transformers/effects.js";
+import type { 
+  SimplifiedTextStyle, 
+  SimplifiedLayout, 
+  SimplifiedFill, 
+  SimplifiedStroke, 
+  SimplifiedEffects 
+} from "./simplified-types.js";
 import type {
   ComponentProperties,
   SimplifiedComponentDefinition,
@@ -17,9 +20,9 @@ export type StyleTypes =
   | SimplifiedEffects
   | string;
 
-export type GlobalVars = {
+export interface GlobalVars {
   styles: Record<string, StyleTypes>;
-};
+}
 
 export interface TraversalContext {
   globalVars: GlobalVars & { extraStyles?: Record<string, Style> };
@@ -28,17 +31,18 @@ export interface TraversalContext {
 }
 
 /**
- * An extractor function that can modify a SimplifiedNode during traversal.
+ * An extractor function that extracts specific properties from a Figma node.
+ * It returns a Partial<SimplifiedNode> which will be merged into the final result.
+ * It should NOT modify the 'children' property.
  *
  * @param node - The current Figma node being processed
- * @param result - SimplifiedNode object being built—this can be mutated inside the extractor
- * @param context - Traversal context including globalVars and parent info. This can also be mutated inside the extractor.
+ * @param context - Traversal context including globalVars and parent info.
+ * @returns Partial object containing extracted properties
  */
 export type ExtractorFn = (
   node: FigmaDocumentNode,
-  result: SimplifiedNode,
   context: TraversalContext,
-) => void;
+) => Partial<Omit<SimplifiedNode, "children">>;
 
 export interface SimplifiedDesign {
   name: string;
@@ -75,6 +79,10 @@ export interface SimplifiedNode {
   effects?: string;
   opacity?: number;
   borderRadius?: string;
+  rotation?: number; // degrees
+  transform?: string; // css transform string
+  // Vector Paths (for SVG)
+  vectorPaths?: string[]; // SVG path data strings
   // layout & alignment
   layout?: string;
   layoutMode?: "absolute" | "relative"; // Inferred layout positioning

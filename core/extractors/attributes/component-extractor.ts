@@ -1,10 +1,12 @@
-import type { ExtractorFn } from "../types.js";
+import type { ExtractorFn, SimplifiedNode } from "../../types/extractor-types.js";
 import { hasValue } from "../../utils/identity.js";
 
 /**
  * Extracts component-related properties from INSTANCE nodes.
  */
-export const componentExtractor: ExtractorFn = (node, result, _context) => {
+export const componentExtractor: ExtractorFn = (node, _context) => {
+  const result: Partial<SimplifiedNode> = {};
+
   if (node.type === "INSTANCE") {
     if (hasValue("componentId", node)) {
       result.componentId = node.componentId;
@@ -21,4 +23,6 @@ export const componentExtractor: ExtractorFn = (node, result, _context) => {
       );
     }
   }
+
+  return result;
 };

@@ -1,4 +1,4 @@
-import type { SimplifiedNode, SimplifiedDesign } from "../types.js";
+import type { SimplifiedNode, SimplifiedDesign } from "../../types/extractor-types.js";
 
 export function flattenRedundantNodes(
   nodes: SimplifiedNode[],

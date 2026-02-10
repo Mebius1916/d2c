@@ -97,22 +97,16 @@ function checkChildrenRecursively(node: FigmaNode): { isValidIcon: boolean; hasV
     if ("visible" in child && child.visible === false) continue;
 
     if (DISALLOWED_CHILD_TYPES.has(child.type)) {
-      if (child.type !== "GROUP") {
+      if (child.type === "GROUP") {
+        const subCheck = checkChildrenRecursively(child);
+        if (!subCheck.isValidIcon) return { isValidIcon: false, hasVectorContent: false };
+        if (subCheck.hasVectorContent) hasVectorContent = true;
+      } else {
         return { isValidIcon: false, hasVectorContent: false };
       }
-    }
-    // 发现矢量
-    if (ICON_PRIMITIVE_TYPES.has(child.type) || ICON_COMPLEX_VECTOR_TYPES.has(child.type)) {
+    } else {
+      // 遇到合法的 Vector/Shape
       hasVectorContent = true;
-    }
-
-    // 递归 group
-    if (child.type === "GROUP" || ICON_CONTAINER_TYPES.has(child.type)) {
-       if (child.type === "GROUP") {
-         const groupResult = checkChildrenRecursively(child);
-         if (!groupResult.isValidIcon) return { isValidIcon: false, hasVectorContent: false };
-         if (groupResult.hasVectorContent) hasVectorContent = true;
-       }
     }
   }
 

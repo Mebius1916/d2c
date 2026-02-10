@@ -3,8 +3,7 @@ import type {
   GetFileNodesResponse,
 } from "@figma/rest-api-spec";
 import { simplifyRawFigmaObject } from "./core/extractors/pipeline/design-extractor.js";
-import { allExtractors } from "./core/extractors/attributes/built-in.js";
-import type { SimplifiedDesign } from "./core/extractors/types.js";
+import type { SimplifiedDesign } from "./core/types/extractor-types.js";
 
 /**
  * Main Entry Point for the D2C Engine.
@@ -17,5 +16,5 @@ export function extractFigmaAsJSON(
   figmaData: GetFileResponse | GetFileNodesResponse,
 ): SimplifiedDesign {
   // Use the "Full Blood" configuration with all extractors enabled
-  return simplifyRawFigmaObject(figmaData, allExtractors);
+  return simplifyRawFigmaObject(figmaData);
 }

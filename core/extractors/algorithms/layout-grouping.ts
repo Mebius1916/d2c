@@ -8,7 +8,7 @@
   2. 相似度代价 (Similarity Cost)：
      计算行列组面积的方差，方差越小，说明元素的面积越相似。
 */
-import type { SimplifiedNode } from "../types.js";
+import type { SimplifiedNode } from "../../types/extractor-types.js";
 import { getUnionRect, type BoundingBox } from "../../utils/geometry.js";
 import { createVirtualFrame } from "./utils/virtual-node.js";
 import { calculateLayoutGap } from "./utils/dynamic-threshold.js";

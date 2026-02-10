@@ -1,4 +1,4 @@
-import type { ExtractorFn } from "../types.js";
+import type { ExtractorFn, SimplifiedNode } from "../../types/extractor-types.js";
 import { buildSimplifiedStrokes, parsePaint } from "../../transformers/style.js";
 import { buildSimplifiedEffects } from "../../transformers/effects.js";
 import { hasValue, isRectangleCornerRadii } from "../../utils/identity.js";
@@ -7,7 +7,9 @@ import { findOrCreateVar, getStyleName } from "../../utils/style-helper.js";
 /**
  * Extracts visual appearance properties (fills, strokes, effects, opacity, border radius).
  */
-export const visualsExtractor: ExtractorFn = (node, result, context) => {
+export const visualsExtractor: ExtractorFn = (node, context) => {
+  const result: Partial<SimplifiedNode> = {};
+
   // Check if node has children to determine CSS properties
   const hasChildren =
     hasValue("children", node) && Array.isArray(node.children) && node.children.length > 0;
@@ -65,4 +67,19 @@ export const visualsExtractor: ExtractorFn = (node, result, context) => {
   if (hasValue("rectangleCornerRadii", node, isRectangleCornerRadii)) {
     result.borderRadius = `${node.rectangleCornerRadii[0]}px ${node.rectangleCornerRadii[1]}px ${node.rectangleCornerRadii[2]}px ${node.rectangleCornerRadii[3]}px`;
   }
+
+  // Vector Path Extraction (for SVG generation)
+  // Check for 'vectorPaths' or 'fillGeometry'/'strokeGeometry' from REST API
+  if ("fillGeometry" in node && Array.isArray(node.fillGeometry)) {
+    // Simplified: Just take the first valid path data for now
+    const paths = node.fillGeometry
+      .filter((g: any) => g.path)
+      .map((g: any) => g.path);
+      
+    if (paths.length > 0) {
+      result.vectorPaths = paths;
+    }
+  }
+
+  return result;
 };

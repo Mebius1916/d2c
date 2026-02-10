@@ -4,7 +4,7 @@ import type {
   ExtractorFn,
   SimplifiedNode,
   TraversalContext,
-} from "../types.js";
+} from "../../types/extractor-types.js";
 
 /**
  * Traverse the Figma node tree and extract simplified nodes.
@@ -14,7 +14,6 @@ import type {
  */
 export function extractFromDesign(
   nodes: any[], // Raw Figma nodes
-  extractors: ExtractorFn[],
   globalVars: TraversalContext["globalVars"] = { styles: {} },
 ): { nodes: SimplifiedNode[]; globalVars: TraversalContext["globalVars"] } {
   const context: TraversalContext = {
@@ -25,7 +24,7 @@ export function extractFromDesign(
 
   // 1. Process all root nodes (DFS Traversal)
   let processedNodes = nodes
-    .map((node) => processNodeWithExtractors(node, extractors, context))
+    .map((node) => processNodeWithExtractors(node, context))
     .filter((node): node is SimplifiedNode => node !== null);
   
   // 2. Apply Reconstruction Pipeline to Root Level

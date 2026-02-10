@@ -1,4 +1,4 @@
-import type { SimplifiedNode } from "../types.js";
+import type { SimplifiedNode } from "../../types/extractor-types.js";
 import { createVirtualFrame } from "./utils/virtual-node.js";
 import { areRectsTouching } from "../../utils/geometry.js";
 import { UnionFind } from "./utils/union-find.js";

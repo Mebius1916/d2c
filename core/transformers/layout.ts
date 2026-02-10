@@ -5,31 +5,9 @@ import type {
   HasLayoutTrait,
 } from "@figma/rest-api-spec";
 import { generateCSSShorthand, pixelRound } from "../utils/common.js";
+import type { SimplifiedLayout } from "../types/simplified-types.js";
 
-export interface SimplifiedLayout {
-  mode: "none" | "row" | "column";
-  justifyContent?: "flex-start" | "flex-end" | "center" | "space-between" | "baseline" | "stretch";
-  alignItems?: "flex-start" | "flex-end" | "center" | "space-between" | "baseline" | "stretch";
-  alignSelf?: "flex-start" | "flex-end" | "center" | "stretch";
-  wrap?: boolean;
-  gap?: string;
-  locationRelativeToParent?: {
-    x: number;
-    y: number;
-  };
-  dimensions?: {
-    width?: number;
-    height?: number;
-    aspectRatio?: number;
-  };
-  padding?: string;
-  sizing?: {
-    horizontal?: "fixed" | "fill" | "hug";
-    vertical?: "fixed" | "fill" | "hug";
-  };
-  overflowScroll?: ("x" | "y")[];
-  position?: "absolute";
-}
+export { SimplifiedLayout };
 
 // Convert Figma's layout config into a more typical flex-like schema
 export function buildSimplifiedLayout(

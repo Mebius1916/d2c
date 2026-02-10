@@ -1,4 +1,4 @@
-import type { ExtractorFn } from "../types.js";
+import type { ExtractorFn, SimplifiedNode } from "../../types/extractor-types.js";
 import {
   extractNodeText,
   extractTextStyle,
@@ -10,7 +10,9 @@ import { findOrCreateVar, getStyleName } from "../../utils/style-helper.js";
 /**
  * Extracts text content and text styling from a node.
  */
-export const textExtractor: ExtractorFn = (node, result, context) => {
+export const textExtractor: ExtractorFn = (node, context) => {
+  const result: Partial<SimplifiedNode> = {};
+
   // Extract text content
   if (isTextNode(node)) {
     result.text = extractNodeText(node);
@@ -30,4 +32,6 @@ export const textExtractor: ExtractorFn = (node, result, context) => {
       }
     }
   }
+
+  return result;
 };

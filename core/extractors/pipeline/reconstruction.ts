@@ -5,7 +5,7 @@ import { groupNodesByLayout } from "../algorithms/layout-grouping.js";
 import { inferListPatterns } from "../algorithms/list-inference.js";
 import { groupNodesByAdjacency } from "../algorithms/adjacency-clustering.js";
 import { flattenRedundantNodes } from "../algorithms/flattening.js";
-import type { SimplifiedNode, TraversalContext } from "../types.js";
+import type { SimplifiedNode, TraversalContext } from "../../types/extractor-types.js";
 
 /**
  * Runs the full structure reconstruction pipeline on a list of nodes.

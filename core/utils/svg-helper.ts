@@ -1,4 +1,4 @@
-import type { SimplifiedNode } from "../extractors/types.js";
+import type { SimplifiedNode } from "../types/extractor-types.js";
 import type { Node as FigmaDocumentNode } from "@figma/rest-api-spec";
 
 /**

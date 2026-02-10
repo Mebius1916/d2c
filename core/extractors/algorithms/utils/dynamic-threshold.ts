@@ -1,4 +1,4 @@
-import type { SimplifiedNode } from "../../types.js";
+import type { SimplifiedNode } from "../../../types/extractor-types.js";
 
 /**
  * Calculates dynamic adjacency threshold between two nodes based on their types and sizes.

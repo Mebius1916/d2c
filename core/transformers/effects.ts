@@ -6,13 +6,9 @@ import type {
 } from "@figma/rest-api-spec";
 import { formatRGBAColor } from "./style";
 import { hasValue } from "../utils/identity.js";
+import type { SimplifiedEffects } from "../types/simplified-types.js";
 
-export type SimplifiedEffects = {
-  boxShadow?: string;
-  filter?: string;
-  backdropFilter?: string;
-  textShadow?: string;
-};
+export { SimplifiedEffects };
 
 export function buildSimplifiedEffects(n: FigmaDocumentNode): SimplifiedEffects {
   if (!hasValue("effects", n)) return {};

@@ -1,4 +1,4 @@
-import type { SimplifiedNode } from "../types.js";
+import type { SimplifiedNode } from "../../types/extractor-types.js";
 import type { BoundingBox } from "../../utils/geometry.js";
 import { isRectContained } from "../../utils/geometry.js";
 
