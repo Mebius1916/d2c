@@ -8,7 +8,7 @@ import type {
 } from "@figma/rest-api-spec";
 import { simplifyComponents, simplifyComponentSets } from "../../transformers/component.js";
 import type { SimplifiedDesign, TraversalContext, SimplifiedNode } from "../../types/extractor-types.js";
-import { extractFromDesign } from "./node-walker.js";
+import { extractFromDesign } from "./node-processor.js";
 import { flattenRedundantNodes } from "../algorithms/flattening.js";
 
 /**

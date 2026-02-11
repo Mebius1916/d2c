@@ -1,5 +1,53 @@
 # 更新日志 (CHANGELOG)
 
+## [v0.1.10] - 2026-02-11
+
+### 遮挡检测优化与性能提升
+
+> **核心变更**:
+>
+> - **遮挡剔除 V3**: 引入精确的区域减法算法，支持部分遮挡检测，避免误删可见内容。
+> - **性能优化**: 样式查找引入 O(1) 缓存机制，显著提升样式去重效率。
+> - **架构简化**: 移除 `node-walker.ts` 和 `svg-helper.ts`，逻辑收敛至 `node-processor.ts`。
+
+- **遮挡剔除 (Occlusion Culling)**:
+  - **背景**: 原算法只能检测全遮挡，无法处理部分遮挡的情况，且逻辑较为简单。
+  - **改进**:
+    - **精确计算**: 使用 `subtractRect` 算法，递归计算节点的剩余可见区域。
+    - **部分可见性**: 只要节点存在非空的可见区域，且该区域内有内容（文本、图标、自身样式），即保留节点。
+    - **逻辑**: 重写 `removeOccludedNodes`，支持复杂的遮挡场景。
+
+- **性能优化 (Performance)**:
+  - **样式缓存**: `findOrCreateVar` 新增 `styleCache` (Map)，避免在大规模节点处理时的 O(n) 查找开销。
+
+- **代码重构 (Refactoring)**:
+  - **流程整合**: 将 `extractFromDesign` 逻辑移入 `node-processor.ts`，消除循环依赖，简化调用链。
+  - **递归合并**: 将原本分离的节点遍历与结构重构合并为单次递归过程，在回溯阶段即时完成子树重构，避免二次遍历。
+  - **清理**: 删除冗余的 `core/extractors/pipeline/node-walker.ts` 和 `core/utils/svg-helper.ts`。
+
+## [v0.1.9] - 2026-02-10
+
+### 类型系统重构与提取器优化
+
+> **核心变更**:
+>
+> - **类型系统重构**: 将分散的类型定义统一迁移至 `core/types`，建立更严谨的 `SimplifiedNode` 和 `StyleTypes` 类型体系。
+> - **提取器纯函数化**: 重构所有 Extractor 为返回 `Partial<SimplifiedNode>` 的纯函数，消除副作用，提升代码健壮性。
+> - **工具库增强**: 新增 `isNodeEmpty` 等节点检查工具，优化图标和文本的提取逻辑。
+
+- **类型系统 (Type System)**:
+  - 新增 `core/types/simplified-types.ts`，定义所有 Simplified 节点的原子属性接口。
+  - 将 `core/extractors/types.ts` 迁移至 `core/types/extractor-types.ts`，统一管理提取器上下文类型。
+
+- **算法增强 (Algorithm)**:
+  - **Text Transformer**: 大幅增强文本样式解析逻辑，支持更复杂的排版属性。
+  - **Style Transformer**: 简化样式解析逻辑，移除大量冗余代码 (-108 lines)。
+  - **Icon Transformer**: 优化图标识别策略。
+
+- **代码质量 (Code Quality)**:
+  - **Extractors**: 移除对 `result` 对象的直接修改，改为返回提取结果对象。
+  - **Dependencies**: 清理项目中的无效引用。
+
 ## [v0.1.8] - 2026-02-06
 
 ### 架构重构与算法增强
@@ -12,24 +60,25 @@
 > - **结构优化**: 新增冗余层级扁平化算法。
 
 - **冗余层级扁平化 (Flatten Redundant Groups)**:
+
   - **背景**: 消除为了 Auto Layout 而产生的无意义嵌套容器，解决“div 地狱”问题。
   - **逻辑**: 递归识别并提升仅含单子节点且无样式/无布局影响的 Frame/Group。
-
 - **遮挡剔除算法升级 (Occlusion Culling v2)**:
+
   - **背景**: 原 `martinez-polygon-clipping` 库在处理空数组或特定几何时易崩溃，且性能开销大。
   - **改进**:
     - **移除依赖**: 彻底移除 `martinez-polygon-clipping`。
     - **AABB 检测**: 采用 Axis-Aligned Bounding Box (矩形包围盒) 算法进行遮挡判定。
     - **鲁棒性**: 修复了因 `absRect` 缺失导致所有节点被误判为遮挡的 Bug。
-
 - **工程化重构 (Architecture Refactor)**:
+
   - **模块化**: 将 `core/extractors` 拆分为：
     - `algorithms/`: 核心布局推断算法 (Clustering, List, Occlusion...)
     - `attributes/`: 属性提取器 (Layout, Text, Visuals...)
     - `pipeline/`: 调度流水线 (DesignExtractor, NodeWalker...)
   - **工具库下沉**: 将通用 Utils 移至 `core/utils`，业务 Utils 下沉至各模块内部，实现高内聚。
-
 - **输出质量优化 (Output Polish)**:
+
   - **数据完整性**: 修复 `layoutExtractor` 逻辑，确保 `absRect` 正确回填，保证后续算法链正常运行。
   - **字段净化**: 输出前自动剔除 `visualSignature` 等内部调试字段，产出纯净 JSON。
   - **测试增强**: `run-test.ts` 支持自动识别并解包嵌套的 API 响应格式。

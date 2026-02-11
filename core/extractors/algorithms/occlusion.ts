@@ -1,12 +1,12 @@
 import type { SimplifiedNode } from "../../types/extractor-types.js";
 import type { BoundingBox } from "../../utils/geometry.js";
-import { isRectContained } from "../../utils/geometry.js";
+import { subtractRect } from "../../utils/geometry.js";
 
 export function removeOccludedNodes(nodes: SimplifiedNode[]): SimplifiedNode[] {
   if (nodes.length === 0) return [];
 
-  const visibleNodes: SimplifiedNode[] = [];
-  const occluders: BoundingBox[] = [];
+  const visibleNodes: SimplifiedNode[] = []; // 有效节点
+  const occluders: BoundingBox[] = []; // 遮罩层
 
   for (let i = nodes.length - 1; i >= 0; i--) {
     const node = nodes[i];
@@ -17,20 +17,30 @@ export function removeOccludedNodes(nodes: SimplifiedNode[]): SimplifiedNode[] {
       continue;
     }
 
-    let isOccluded = false;
+    // 当前节点的几何区域
+    let remainingRegions = [rect];
 
-    // Check if completely covered by any existing occluder
+    // 遍历所有遮罩层，计算当前节点的可见区域
     for (const occluder of occluders) {
-      if (isRectContained(rect, occluder)) {
-        isOccluded = true;
+      const nextRegions: BoundingBox[] = [];
+      for (const region of remainingRegions) {
+        nextRegions.push(...subtractRect(region, occluder));
+      }
+      remainingRegions = nextRegions;
+      
+      // 如果当前节点的可见区域为空，说明当前节点被完全遮挡
+      if (remainingRegions.length === 0) {
         break;
       }
     }
 
+    // 判断当前节点露出部分是否有可见内容
+    const isOccluded = remainingRegions.length === 0 || !hasVisibleContentInRegions(node, remainingRegions);
+
     if (!isOccluded) {
       visibleNodes.unshift(node);
 
-      // If current node is opaque, add it to occluders list
+      // 加入遮罩层
       if (isOpaque(node)) {
         occluders.push(rect);
       }
@@ -38,6 +48,46 @@ export function removeOccludedNodes(nodes: SimplifiedNode[]): SimplifiedNode[] {
   }
 
   return visibleNodes;
+}
+
+function hasVisibleContentInRegions(node: SimplifiedNode, regions: BoundingBox[]): boolean {
+  // 1. Leaf Nodes (Text, Icon, Image) are inherently visible if they are not fully occluded.
+  if (node.type === "TEXT" || node.type === "SVG" || node.type === "IMAGE" || node.type === "IMAGE-SVG") {
+    return true;
+  }
+
+  // 2. Check if node has visible background/border/effects
+  const hasSelfStyle = 
+    (node.fills && node.fills !== "transparent") || 
+    (node.strokes && node.strokes !== "transparent") ||
+    (node.effects && node.effects !== "transparent"); // Add effects check
+  
+  if (hasSelfStyle) {
+    return true;
+  }
+
+  // 3. If node is transparent container (no fill/stroke), check if any child falls in the remaining regions
+  if (node.children && node.children.length > 0) {
+    for (const child of node.children) {
+      const childRect = getNodeBoundingBox(child);
+      if (!childRect) continue;
+
+      // Check if child intersects with any remaining region
+      for (const region of regions) {
+        // Simple AABB intersection check
+        if (
+          childRect.x < region.x + region.width &&
+          childRect.x + childRect.width > region.x &&
+          childRect.y < region.y + region.height &&
+          childRect.y + childRect.height > region.y
+        ) {
+          return true; // Found a visible child
+        }
+      }
+    }
+    return false;
+  }
+  return false;
 }
 
 // Extract geometry from node
@@ -55,15 +105,20 @@ function getNodeBoundingBox(node: SimplifiedNode): BoundingBox | null {
 
 // Check if node is opaque (blocks vision)
 function isOpaque(node: SimplifiedNode): boolean {
-  // Note: We assume node is visible because it passed the pipeline filters
-  if (node.type === "TEXT") return false;
-  if (node.type === "SVG") return false;
+  // 1. Type Check: Non-rectangular shapes are never opaque occluders
+  if (node.type === "TEXT" || node.type === "SVG" || node.type === "IMAGE-SVG") return false;
   
-  // Images are generally opaque if they don't have transparency set
+  // 2. Opacity Check: Must be fully opaque
+  if (node.opacity !== undefined && node.opacity < 1) return false;
+
+  // 3. Image Exception: Images are generally treated as opaque rectangles
   if (node.type === "IMAGE") return true;
 
-  // Check explicit opacity
-  if (node.opacity !== undefined && node.opacity < 1) return false;
+  // 4. Fill Check: Must have a visible fill
+  if (!node.fills || node.fills === "transparent") return false;
+
+  // 5. Border Radius Check: Must be a sharp rectangle
+  if (node.borderRadius && node.borderRadius !== "0px" && node.borderRadius !== "0") return false;
 
   return true;
 }

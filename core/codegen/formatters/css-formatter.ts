@@ -1,81 +1,40 @@
-/**
- * Converts style objects into CSS strings.
- */
 
-// Helper to convert camelCase to kebab-case
-function toKebabCase(str: string): string {
-  return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
-}
+import { layoutBuilder } from "./builders/layout-builder.js";
+import { typographyBuilder } from "./builders/typography-builder.js";
+import { visualBuilder } from "./builders/visual-builder.js";
 
-/**
- * Format a single style object into CSS declaration body
- * e.g. { color: "red", fontSize: "16px" } -> "color: red; font-size: 16px;"
- */
-export function formatStyleBody(style: Record<string, any>): string {
+
+export function formatStyleBody(style: any): string {
   if (!style) return "";
-  
-  return Object.entries(style)
-    .filter(([_, value]) => value !== undefined && value !== null)
-    .map(([key, value]) => {
-      // Handle special cases
-      if (key === 'mode') {
-        // layout.mode -> display: flex, flexDirection: ...
-        if (value === 'column') return 'display: flex; flex-direction: column;';
-        if (value === 'row') return 'display: flex; flex-direction: row;';
-        return '';
-      }
-      
-      if (key === 'sizing') {
-        // sizing handled by layout logic or width/height props
-        return ''; 
-      }
+  let styles: Record<string, string> = {};
 
-      if (key === 'dimensions') {
-        // dimensions usually mean fixed width/height
-        let dims = '';
-        if (value.width) dims += `width: ${value.width}px; `;
-        if (value.height) dims += `height: ${value.height}px; `;
-        return dims;
+  // Dispatch to builders
+  if ("mode" in style) styles = layoutBuilder(style);
+  else if ("fontFamily" in style) styles = typographyBuilder(style);
+  else if (Array.isArray(style)) styles = visualBuilder.fills(style);
+  else if ("colors" in style && "strokeWeight" in style) styles = visualBuilder.strokes(style);
+  else if ("type" in style || (Array.isArray(style) && style[0]?.type)) {
+      const arr = Array.isArray(style) ? style : [style];
+      if (arr.length > 0 && (arr[0].type.includes("SHADOW") || arr[0].type.includes("BLUR"))) {
+          styles = visualBuilder.effects(style);
       }
+  }
 
-      if (key === 'locationRelativeToParent') return ''; // Absolute positioning handled separately
-
-      return `${toKebabCase(key)}: ${value};`;
-    })
-    .join(" ");
+  // Convert object to CSS string
+  return Object.entries(styles)
+    .filter(([_, value]) => value !== undefined && value !== "")
+    .map(([prop, value]) => `${prop}: ${value}`)
+    .join("; ") + (Object.keys(styles).length > 0 ? ";" : "");
 }
 
-/**
- * Generate global CSS stylesheet from globalVars
- */
 export function generateGlobalCSS(globalVars: Record<string, any>): string {
   const styles = globalVars.styles || {};
   let css = "";
 
-  Object.entries(styles).forEach(([id, styleBody]) => {
-    // Sanitize ID for CSS class name
-    const className = id.replace(/[^a-zA-Z0-9-_]/g, '_');
-    
-    // For arrays (like fills), we might need special handling, but for now assume simplified object
-    // In our DSL, fills is often an array of objects.
-    // If styleBody is array (e.g. fills), we skip for now or need complex logic.
-    // But layout/text styles are objects.
-    
-    if (Array.isArray(styleBody)) {
-        // Handle Fills array: Backgrounds
-        // Simplification: take the first visible solid/gradient
-        // Real impl needs to stack backgrounds
-        const backgrounds = styleBody.map((fill: any) => {
-            if (typeof fill === 'string') return `background: ${fill};`; // Simple color string
-            if (fill.type === 'IMAGE') return `background-image: url(${fill.imageRef}); background-size: ${fill.scaleMode === 'FIT' ? 'contain' : 'cover'};`;
-            if (fill.type === 'GRADIENT_LINEAR' || fill.type === 'GRADIENT_RADIAL') return `background: ${fill.gradient};`;
-            return '';
-        }).join(" ");
-        
-        css += `.${className} { ${backgrounds} }\n`;
-    } else {
-        css += `.${className} { ${formatStyleBody(styleBody as Record<string, any>)} }\n`;
-    }
+  Object.entries(styles).forEach(([id, styleObj]) => {
+    const className = id.replace(/[^a-zA-Z0-9-_]/g, "_");
+    const body = formatStyleBody(styleObj);
+    if (body) css += `.${className} { ${body} }\n`;
   });
 
   return css;

@@ -5,14 +5,22 @@ import type { Node as FigmaDocumentNode } from "@figma/rest-api-spec";
 
 /**
  * Helper function to find or create a global variable.
+ * Optimized with O(1) lookup using a cache.
  */
 export function findOrCreateVar(globalVars: GlobalVars, value: StyleTypes, prefix: string): string {
-  // Check if the same value already exists
-  const [existingVarId] =
-    Object.entries(globalVars.styles).find(
-      ([_, existingValue]) => JSON.stringify(existingValue) === JSON.stringify(value),
-    ) ?? [];
+  // Initialize cache if it doesn't exist
+  if (!globalVars.styleCache) {
+    globalVars.styleCache = new Map();
+    // Populate cache with existing styles (migration path)
+    Object.entries(globalVars.styles).forEach(([id, val]) => {
+      globalVars.styleCache!.set(JSON.stringify(val), id);
+    });
+  }
 
+  const stringifiedValue = JSON.stringify(value);
+
+  // O(1) Lookup
+  const existingVarId = globalVars.styleCache.get(stringifiedValue);
   if (existingVarId) {
     return existingVarId;
   }
@@ -20,6 +28,8 @@ export function findOrCreateVar(globalVars: GlobalVars, value: StyleTypes, prefi
   // Create a new variable if it doesn't exist
   const varId = generateVarId(prefix);
   globalVars.styles[varId] = value;
+  globalVars.styleCache.set(stringifiedValue, varId);
+  
   return varId;
 }
 

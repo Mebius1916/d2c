@@ -5,7 +5,7 @@
 */
 import type { SimplifiedNode } from "../../types/extractor-types.js";
 import { createVirtualFrame } from "./utils/virtual-node.js";
-import { type BoundingBox, areRectsTouching } from "../../utils/geometry.js";
+import { areRectsTouching, type BoundingBox } from "../../utils/geometry.js";
 import { UnionFind } from "./utils/union-find.js";
 
 const SPATIAL_MERGE_THRESHOLD = 80; // Max size for an icon

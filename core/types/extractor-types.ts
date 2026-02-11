@@ -22,6 +22,7 @@ export type StyleTypes =
 
 export interface GlobalVars {
   styles: Record<string, StyleTypes>;
+  styleCache?: Map<string, string>;
 }
 
 export interface TraversalContext {
@@ -95,9 +96,4 @@ export interface SimplifiedNode {
   visualSignature?: string;
 }
 
-export interface BoundingBox {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+export type { BoundingBox } from "./simplified-types.js";

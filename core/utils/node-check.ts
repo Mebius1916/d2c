@@ -24,12 +24,5 @@ export function isNodeEmpty(node: SimplifiedNode): boolean {
   if (node.strokes) return false;
   if (node.effects) return false;
   
-  // Check for layout styles that might be structural (e.g. fixed size spacer)
-  // If a node has fixed dimensions but no children/style, it might be a spacer.
-  // But usually spacers are handled by Gap or Padding. 
-  // Let's be conservative: if it has a specific layout mode other than 'none', keep it?
-  // Actually, an empty flex container with no children is useless unless it has height/width.
-  // For now, let's assume if it has no styles, it's empty.
-  
   return true;
 }

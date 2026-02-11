@@ -99,6 +99,13 @@ export interface SimplifiedPatternFill {
   backgroundPosition: string;
 }
 
+export interface BoundingBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export type SimplifiedFill =
   | SimplifiedImageFill
   | SimplifiedGradientFill
