@@ -1,5 +1,45 @@
 # 更新日志 (CHANGELOG)
 
+## [v0.1.11] - 2026-02-12
+
+### 父子推导算法重构
+
+> **涉及文件**:
+>
+> - `core/extractors/algorithms/reparenting.ts` (重构: 父子关系推导算法)
+
+- **基于图层顺序的递归推导 (Layer-Based Recursive Reparenting)**:
+  - **背景**: 废弃原有的“全局拍扁+面积排序”算法，解决其无法正确处理复杂层级（如 Mask、Background）归属的问题。
+  - **新逻辑**:
+    1. **尊重 Z-Index**: 严格遵循 Figma 原始图层顺序（Bottom-to-Top），优先让底层元素（如背景卡片）捕获其上方的浮动元素（如按钮、文本）。
+    2. **递归分治**: 摒弃全局扁平化，采用递归策略，以容器为单位局部重组，提升算法效率与稳定性。
+    3. **去递归优化**: 移除内部递归调用，依赖外部 Pipeline 的递归机制，避免重复计算。
+  - **价值**: 生成的 DOM 结构严格遵循“视觉堆叠上下文”，完美还原“背景包含内容”的常规布局逻辑。
+
+### 样式检测统一与代码去重
+
+> **涉及文件**:
+>
+> - `core/utils/node-check.ts` (新增: 统一的样式检查工具)
+> - `core/extractors/algorithms/flattening.ts` (优化: 复用样式检查)
+> - `core/extractors/algorithms/occlusion.ts` (优化: 复用样式检查)
+> - `core/transformers/icon.ts` (增强: 图标识别策略)
+> - `core/transformers/image.ts` (优化: 图片/遮罩识别)
+
+- **样式检测收敛 (Unified Style Checking)**:
+  - **背景**: 多个模块（扁平化、遮挡剔除、图标识别）各自实现了重复的“是否有可见样式”检查逻辑，且覆盖度不一致。
+  - **改进**:
+    - 在 `core/utils/node-check.ts` 中封装通用的 `hasVisibleStyles` 函数。
+    - 统一支持 Fills, Strokes, Effects 及 BorderRadius 的检测。
+    - 所有下游模块全部迁移至该统一接口，消除了代码冗余并提升了判定一致性。
+
+- **转换器增强 (Transformers Polish)**:
+  - **图标识别**:
+    - 支持仅有边框/背景样式的空容器作为图标（常见于占位符或装饰框）。
+    - 扩展 `COMPLEX_VECTOR` 识别范围，纳入 `STAR` 和 `POLYGON`。
+  - **图片/遮罩识别**:
+    - 优化 Mask Group 判定：只要是遮罩组且不含文本节点，即视为图片组件（不再强制要求包含 Image Fill），有效减少了误判。
+
 ## [v0.1.10] - 2026-02-11
 
 ### 遮挡检测优化与性能提升

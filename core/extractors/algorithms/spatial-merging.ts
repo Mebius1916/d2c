@@ -1,8 +1,3 @@
-/*
-  小图标合并:
-    通过并查集算法将所有有关系的碎片节点聚集为一个集合，
-    然后将这个集合合并为一个虚拟的图标节点，然后插入到原始节点列表中（不保留原始碎片节点）
-*/
 import type { SimplifiedNode } from "../../types/extractor-types.js";
 import { createVirtualFrame } from "./utils/virtual-node.js";
 import { areRectsTouching, type BoundingBox } from "../../utils/geometry.js";
@@ -54,7 +49,8 @@ export function mergeSpatialIcons(nodes: SimplifiedNode[]): SimplifiedNode[] {
   // 3. Group by cluster
   const groupIndices = uf.getGroups();
   const clusters = new Map<number, typeof candidates>();
-  
+
+  // 并查集存储的是 id，所以这里需要根据 id 找到对应的碎片
   for (const [root, indices] of groupIndices) {
     const parts = indices.map(idx => candidates[idx]);
     clusters.set(root, parts);

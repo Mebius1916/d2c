@@ -1,107 +1,104 @@
 /**
-  为每个节点尽可能的找到最小的父节点,判断是否为父节点的条件：
-    1. 父节点必须是可包含子节点的矩形区域。
-    2. 子节点必须完全包含在父节点内。
-    3. 父节点的面积必须大于等于子节点的面积。
-  同时需要判断改节点是否是绝对布局（脱离文档流），通过碰撞检测来判断，
-  如果 A 和 B 重叠，则贪心判断面积小的为绝对布局节点。
-
+ * Reparenting Algorithm (Strict Layer-Based Recursive)
  */
+
 import type { SimplifiedNode } from "../../types/extractor-types.js";
 import { getRectArea, isRectContained, areRectsTouching } from "../../utils/geometry.js";
 
 export function reparentNodes(rootNodes: SimplifiedNode[]): SimplifiedNode[] {
-  const flatNodes: SimplifiedNode[] = [];
-  
-  //  dfs 算法 将树结构拍平
-  function flatten(nodes: SimplifiedNode[]) {
-    for (const node of nodes) {
-      const nodeCopy = { ...node, children: [] };
-      flatNodes.push(nodeCopy);
-      if (node.children && node.children.length > 0) {
-        flatten(node.children);
-      }
-    }
-  }
-  flatten(rootNodes);
-  
-  const roots: SimplifiedNode[] = [];
-  // 按面积从小到大排序, 确保子节点能找到父节点
-  flatNodes.sort((a, b) => getRectArea(a.absRect) - getRectArea(b.absRect));
+  // 我们创建一个虚拟根节点来统一处理顶层，简化递归逻辑
+  const virtualRoot: SimplifiedNode = {
+    id: "virtual-root",
+    name: "Root",
+    type: "FRAME",
+    children: [...rootNodes], // 浅拷贝
+    layoutMode: "relative"
+  };
 
-  const hasParent = new Set<string>();
+  // 开始递归处理
+  processContainer(virtualRoot);
 
-  for (let i = 0; i < flatNodes.length; i++) {
-    const node = flatNodes[i];
-    // 跳过无效节点
-    if (!node.absRect || node.absRect.width === 0 || node.absRect.height === 0) {
-      roots.push(node); 
+  return virtualRoot.children || [];
+}
+
+function processContainer(container: SimplifiedNode) {
+  if (!container.children || container.children.length === 0) return;
+
+  // 1. 预处理：确保子节点按 Z-Index 从低到高排序 (Bottom -> Top)
+  let nodes = [...container.children]; 
+  
+  // 用于存储处理后的新子节点列表 (未被吃掉的节点)
+  const remainingNodes: SimplifiedNode[] = [];
+  
+  // 2. 核心循环：贪心 "大背景吃小内容"
+  while (nodes.length > 0) {
+    // 取出当前层级最低的节点 (Candidate Parent, e.g. Card Background)
+    const parent = nodes.shift()!;
+    
+    // 如果它没有资格当爸爸，就直接放进结果里
+    if (!canBeParent(parent) || !parent.absRect) {
+      remainingNodes.push(parent);
       continue;
     }
 
-    let bestParent: SimplifiedNode | null = null;
-    let minParentArea = Infinity;
-    // 从当前节点后面开始查找父节点(最小父节点原则)
-    for (let j = i + 1; j < flatNodes.length; j++) {
-      const candidate = flatNodes[j];
-  
-      if (!candidate.absRect) continue;
+    // 尝试在剩余的节点 (层级比它高的，即浮在它上面的) 中寻找孩子
+    const childrenToAdopt: SimplifiedNode[] = [];
+    const nonChildren: SimplifiedNode[] = [];
 
-      if (!canBeParent(candidate)) continue;
-      // 检查是否包含关系
-      if (isRectContained(candidate.absRect, node.absRect)) {
-        const candidateArea = getRectArea(candidate.absRect);
-        if (candidateArea <= getRectArea(node.absRect)) continue;
+    for (const potentialChild of nodes) {
+      if (!potentialChild.absRect) {
+        nonChildren.push(potentialChild);
+        continue;
+      }
+
+      if (isRectContained(parent.absRect, potentialChild.absRect) && 
+          getRectArea(parent.absRect) >= getRectArea(potentialChild.absRect)) {
         
-        if (candidateArea < minParentArea) {
-          minParentArea = candidateArea;
-          bestParent = candidate;
-        }
+        // 找到了孩子！
+        childrenToAdopt.push(potentialChild);
+      } else {
+        // 不是孩子，保留在当前层级
+        nonChildren.push(potentialChild);
       }
     }
 
-    if (bestParent) {
-      if (!bestParent.children) bestParent.children = [];
-      bestParent.children.push(node);
-      hasParent.add(node.id);
-    } else {
-      roots.push(node);
+    if (childrenToAdopt.length > 0) {
+      if (!parent.children) parent.children = [];
+      parent.children.push(...childrenToAdopt);
     }
+
+    // 更新当前层级剩余待处理的节点 (剔除了被吃掉的孩子)
+    nodes = nonChildren;
+    
+    // Parent 处理完毕，放入结果集
+    remainingNodes.push(parent);
   }
 
-  const allContainers = [
-    ...roots, 
-    ...flatNodes.filter(n => n.children && n.children.length > 0)
-  ];
-  
-  const uniqueContainers = new Set(allContainers);
-  
-  for (const container of uniqueContainers) {
-    if (container.children && container.children.length > 1) {
-      detectAbsoluteChildren(container);
-    }
-  }
+  // 3. 后处理：绝对定位检测 (仅在当前层级)
+  detectAbsoluteChildrenInList(remainingNodes);
 
-  return roots;
+  // 4. 恢复顺序并写回
+  container.children = remainingNodes;
 }
 
-function detectAbsoluteChildren(container: SimplifiedNode) {
-  if (!container.children) return;
+function detectAbsoluteChildrenInList(nodes: SimplifiedNode[]) {
+  if (nodes.length < 2) return;
   
-  const children = container.children;
-  
-  for (let i = 0; i < children.length; i++) {
-    const childA = children[i];
-    if (!childA.absRect) continue;
+  for (let i = 0; i < nodes.length; i++) {
+    const nodeA = nodes[i];
+    if (!nodeA.absRect) continue;
     
-    for (let j = 0; j < children.length; j++) {
-      if (i === j) continue;
-      const childB = children[j];
-      if (!childB.absRect) continue;
+    for (let j = i + 1; j < nodes.length; j++) {
+      const nodeB = nodes[j];
+      if (!nodeB.absRect) continue;
       
-      if (areRectsTouching(childA.absRect, childB.absRect, -1)) { 
-          if (getRectArea(childA.absRect) < getRectArea(childB.absRect)) {
-            childA.layoutMode = "absolute";
+      // 只有实质性重叠才算 (gap = -1)
+      if (areRectsTouching(nodeA.absRect, nodeB.absRect, -1)) { 
+          // 冲突发生！面积小的变成 Absolute
+          if (getRectArea(nodeA.absRect) < getRectArea(nodeB.absRect)) {
+            nodeA.layoutMode = "absolute";
+          } else {
+            nodeB.layoutMode = "absolute";
           }
       }
     }
@@ -109,7 +106,18 @@ function detectAbsoluteChildren(container: SimplifiedNode) {
 }
 
 function canBeParent(node: SimplifiedNode): boolean {
-  const NON_CONTAINERS = new Set(["TEXT", "SVG", "IMAGE", "VECTOR", "ELLIPSE", "RECTANGLE", "LINE", "STAR", "POLYGON"]);
+  const NON_CONTAINERS = new Set([
+    "TEXT", 
+    "SVG", 
+    "IMAGE", 
+    "VECTOR", 
+    "ELLIPSE", 
+    "RECTANGLE", 
+    "LINE", 
+    "STAR", 
+    "POLYGON",
+    "BOOLEAN_OPERATION"
+  ]);
   
   if (NON_CONTAINERS.has(node.type)) return false;
   if (node.semanticTag === "icon") return false;

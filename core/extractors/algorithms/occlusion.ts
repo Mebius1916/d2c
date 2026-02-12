@@ -1,6 +1,7 @@
 import type { SimplifiedNode } from "../../types/extractor-types.js";
 import type { BoundingBox } from "../../utils/geometry.js";
 import { subtractRect } from "../../utils/geometry.js";
+import { hasVisibleStyles } from "../../utils/node-check.js";
 
 export function removeOccludedNodes(nodes: SimplifiedNode[]): SimplifiedNode[] {
   if (nodes.length === 0) return [];
@@ -57,12 +58,7 @@ function hasVisibleContentInRegions(node: SimplifiedNode, regions: BoundingBox[]
   }
 
   // 2. Check if node has visible background/border/effects
-  const hasSelfStyle = 
-    (node.fills && node.fills !== "transparent") || 
-    (node.strokes && node.strokes !== "transparent") ||
-    (node.effects && node.effects !== "transparent"); // Add effects check
-  
-  if (hasSelfStyle) {
+  if (hasVisibleStyles(node)) {
     return true;
   }
 

@@ -1,10 +1,10 @@
 import type { Node as FigmaNode } from "@figma/rest-api-spec";
+import { hasVisibleStyles } from "../utils/node-check.js";
+
 // 基础图形
 const ICON_PRIMITIVE_TYPES: Set<string> = new Set([
   "ELLIPSE",
   "RECTANGLE",
-  "STAR",
-  "POLYGON",
   "LINE",
 ]);
 
@@ -12,6 +12,8 @@ const ICON_PRIMITIVE_TYPES: Set<string> = new Set([
 const ICON_COMPLEX_VECTOR_TYPES: Set<string> = new Set([
   "VECTOR",
   "BOOLEAN_OPERATION",
+  "STAR",
+  "POLYGON",
 ]);
 
 // 容器
@@ -64,7 +66,7 @@ export function isIcon(node: FigmaNode): boolean {
   }
   
   if (isComplexVector) {
-    if (width > 120 || height > 120) return false;
+    return true;
   }
 
   if (isContainer) {
@@ -78,7 +80,14 @@ export function isIcon(node: FigmaNode): boolean {
     // 递归检查子节点
     const checkResult = checkChildrenRecursively(node);
     if (!checkResult.isValidIcon) return false;
-    return checkResult.hasVectorContent;
+
+    // 空容器如果具有可见的样式（如边框、填充），且尺寸符合图标标准，也应视为图标
+    if (!checkResult.hasVectorContent) {
+      if (hasVisibleStyles(node)) return true;
+      return false;
+    }
+    
+    return true;
   }
 
   return true;
@@ -112,3 +121,4 @@ function checkChildrenRecursively(node: FigmaNode): { isValidIcon: boolean; hasV
 
   return { isValidIcon: true, hasVectorContent };
 }
+

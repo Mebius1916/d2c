@@ -2,18 +2,13 @@ import type { BoundingBox } from "../types/simplified-types.js";
 
 export type { BoundingBox };
 
-/**
- * Calculates the area of a bounding box.
- */
+// 计算矩形的面积
 export function getRectArea(rect: BoundingBox | undefined | null): number {
   if (!rect) return 0;
   return rect.width * rect.height;
 }
 
-/**
- * Checks if rect 'parent' fully contains rect 'child'.
- * @param epsilon Tolerance for floating point errors or small misalignments (default: 1px)
- */
+// 判断一个矩形是否完全包含在另一个矩形内
 export function isRectContained(parent: BoundingBox, child: BoundingBox, epsilon = 1): boolean {
   return (
     child.x >= parent.x - epsilon &&
@@ -23,10 +18,7 @@ export function isRectContained(parent: BoundingBox, child: BoundingBox, epsilon
   );
 }
 
-/**
- * Checks if two rects are touching or overlapping within a specified gap.
- * @param gap Max distance to consider touching (default: 0)
- */
+// AABB 碰撞检测
 export function areRectsTouching(a: BoundingBox, b: BoundingBox, gap = 0): boolean {
   return (
     a.x < b.x + b.width + gap &&
@@ -36,9 +28,7 @@ export function areRectsTouching(a: BoundingBox, b: BoundingBox, gap = 0): boole
   );
 }
 
-/**
- * Calculates the union bounding box of multiple rects.
- */
+// 寻找一个能把所有碎片包裹在内的最小矩形
 export function getUnionRect(rects: BoundingBox[]): BoundingBox {
   if (rects.length === 0) {
     return { x: 0, y: 0, width: 0, height: 0 };
@@ -61,11 +51,7 @@ export function getUnionRect(rects: BoundingBox[]): BoundingBox {
   };
 }
 
-/**
- * Subtracts rect B from rect A, returning a list of remaining rects.
- * This is used for precise occlusion culling.
- * The result is a set of non-overlapping rects that cover the area of (A - B).
- */
+// 四向分割算法
 export function subtractRect(subject: BoundingBox, clipper: BoundingBox): BoundingBox[] {
   // 1. If no intersection, return original subject
   if (!areRectsTouching(subject, clipper)) {

@@ -7,8 +7,8 @@ export function isImageNode(node: FigmaNode): boolean {
   }
 
   // 2. 遮罩组检测 (Mask Group)
-  // 逻辑: 如果是容器，包含 Mask 节点，且内部包含图片填充，则视为完整图片
-  if (isMaskGroup(node) && containsImage(node)) {
+  // 逻辑: 如果是容器，包含 Mask 节点，且不包含可编辑文本（避免误伤UI内容），则视为完整图片
+  if (isMaskGroup(node) && !hasTextChild(node)) {
     return true;
   }
 
@@ -26,7 +26,6 @@ export function isImageNode(node: FigmaNode): boolean {
   if (name.startsWith("bitmap") || name.startsWith("image") || name.startsWith("img_")) {
     return !hasTextChild(node);
   }
-
   return false;
 }
 
@@ -47,16 +46,6 @@ function isMaskGroup(node: FigmaNode): boolean {
 function hasImageFills(node: FigmaNode): boolean {
   if ("fills" in node && Array.isArray(node.fills)) {
     return node.fills.some((paint) => paint.type === "IMAGE");
-  }
-  return false;
-}
-
-// 递归检查是否包含图片内容
-function containsImage(node: FigmaNode): boolean {
-  if (hasImageFills(node)) return true;
-
-  if ("children" in node && Array.isArray(node.children)) {
-    return node.children.some((child) => containsImage(child));
   }
   return false;
 }
