@@ -112,7 +112,7 @@ function signaturesMatch(nodes: SimplifiedNode[], start1: number, start2: number
 function createVirtualGroup(children: SimplifiedNode[]): SimplifiedNode {
   return createVirtualFrame({
     name: "Item Group",
-    type: "FRAME",
+    type: "CONTAINER",
     layoutMode: "relative",
     children: children,
     visualSignature: children.map(c => c.visualSignature).join("+")
@@ -156,8 +156,7 @@ function createVirtualList(children: SimplifiedNode[], isVertical: boolean): Sim
 
   return createVirtualFrame({
     name: "List",
-    type: "FRAME",
-    semanticTag: "list",
+    type: "CONTAINER",
     layout: {
       layoutMode: isVertical ? "VERTICAL" : "HORIZONTAL",
       primaryAxisAlignItems: "MIN",

@@ -1,14 +1,17 @@
-import { runReconstructionPipeline } from "./reconstruction.js";
+import { runStructurePipeline, runLayoutPipeline } from "./reconstruction.js";
 import type {
   TraversalContext,
   SimplifiedNode,
 } from "../../types/extractor-types.js";
-import { processNodeWithExtractors } from "./core-process.js";
+import { processNodes } from "./utils/core-process.js";
+import { walkTreePostOrder } from "./utils/walk-tree.js";
+import { shouldPruneNode } from "../../utils/node-check.js";
+
 /**
  * Traverse the Figma node tree and extract simplified nodes.
  *
  * This function orchestrates the traversal and delegates specific extraction
- * logic to the `processNodeWithExtractors` function.
+ * logic to the `processNodes` function.
  */
 export function extractFromDesign(
   nodes: any[], // Raw Figma nodes
@@ -20,18 +23,26 @@ export function extractFromDesign(
     globalVars,
   };
 
-  // 1. Process all root nodes (DFS Traversal & Extraction)
-  let processedNodes = nodes
-    .map((node) => processNodeWithExtractors(node, context)) // 递
-    .filter((node): node is SimplifiedNode => node !== null); // 归
-  
-  // 2. Process Design Tree (Structure Reconstruction) - Root Level
-  if (processedNodes.length > 0) {
-      processedNodes = runReconstructionPipeline(processedNodes, globalVars);
-  }
+  // 1. Extraction Phase (with Injected Structure Pass)
+  let rootNodes = processNodes(nodes, context, runStructurePipeline);
+
+  // 2. Layout Phase: Post-Order Traversal (Bottom-Up)
+  rootNodes = walkTreePostOrder(rootNodes, (children) => {
+    const processedNodes = runLayoutPipeline(children, globalVars);
+
+    // Prune empty containers
+    return processedNodes.filter((node) => {
+      if (node.type === "CONTAINER") {
+        if (shouldPruneNode(node)) {
+          return false;
+        }
+      }
+      return true;
+    });
+  });
 
   return {
-    nodes: processedNodes,
+    nodes: rootNodes,
     globalVars,
   };
 }

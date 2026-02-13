@@ -1,5 +1,32 @@
 # 更新日志 (CHANGELOG)
 
+## [v0.1.12] - 2026-02-13
+
+### 节点清理与空容器剪枝优化
+
+> **涉及文件**:
+>
+> - `core/utils/node-check.ts` (新增/合并: `shouldPruneNode`)
+> - `core/extractors/pipeline/utils/core-process.ts` (优化: 使用统一剪枝逻辑)
+> - `core/extractors/pipeline/node-processor.ts` (优化: 布局阶段新增空容器剪枝)
+> - `core/extractors/pipeline/core-process.ts` (删除: 冗余文件)
+
+- **统一节点剪枝逻辑 (Unified Pruning Logic)**:
+  - **背景**: 项目中存在多处判断“是否为空节点”的逻辑（`isNodeEmpty` 和 `shouldPruneNode`），且逻辑分散在不同阶段，维护成本高。
+  - **改进**:
+    - 将 `isNodeEmpty` 和 `shouldPruneNode` 合并为唯一的 `shouldPruneNode` 函数。
+    - 明确了剪枝标准：无子节点 + 无可见样式 + 非内容节点（Text/Image/SVG）= 可剪枝。
+
+- **布局阶段增强 (Layout Phase Enhancement)**:
+  - **背景**: 布局重建算法（分组、展平）执行后，可能会产生新的“空容器”（例如子节点被展平移走后的父容器），这些残留容器会污染最终代码。
+  - **改进**:
+    - 在 `node-processor.ts` 的后序遍历（Post-Order Traversal）阶段，引入了额外的剪枝步骤。
+    - 利用 `walkTreePostOrder` 的自底向上特性，确保所有因重组产生的空壳都能被及时清理。
+
+- **代码库清理 (Codebase Cleanup)**:
+  - **删除**: 移除了不再使用的 `core/extractors/pipeline/core-process.ts` 文件（已被 `utils/core-process.ts` 替代）。
+  - **类型修正**: 修正了 `SimplifiedNode` 类型定义，移除了未使用的 `semanticTag`，规范了 `type` 枚举。
+
 ## [v0.1.11] - 2026-02-12
 
 ### 父子推导算法重构

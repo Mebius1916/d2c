@@ -11,20 +11,14 @@ export function generateVisualSignature(node: SimplifiedNode): string {
   // 1. Basic Type
   parts.push(node.type);
 
-  // 2. Semantic Tag (if any)
-  if (node.semanticTag) {
-    parts.push(node.semanticTag);
-  }
-
-  // 3. Size (Tiered Quantization)
-  // 分段量化
+  // 2. Size (Tiered Quantization)
   if (node.absRect) {
     const w = quantizeSize(node.absRect.width);
     const h = quantizeSize(node.absRect.height);
     parts.push(`${w}x${h}`);
   }
 
-  // 4. Critical Styles (simplified)
+  // 3. Critical Styles (simplified)
   
   // Text Styles
   if (node.type === "TEXT" && node.textStyle) {

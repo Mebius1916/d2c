@@ -1,5 +1,5 @@
 import type { SimplifiedDesign, SimplifiedNode } from "../../types/extractor-types.js";
-import { isNodeEmpty, hasVisibleStyles } from "../../utils/node-check.js";
+import { hasVisibleStyles } from "../../utils/node-check.js";
 
 /**
  * Flattens redundant nested groups/frames that don't contribute to layout or style.
@@ -36,15 +36,14 @@ function isRedundant(
   if (!node.children || node.children.length !== 1) return false;
 
   // Must be a container type
-  if (node.type !== 'FRAME' && node.type !== 'GROUP') return false;
-
+  if (node.type !== 'CONTAINER') return false;
+  
+  
   // Must have no visual styles
   if (hasVisibleStyles(node)) return false;
 
   // Must have no layout impact (padding)
   if (hasLayoutImpact(node, globalVars)) return false;
-  
-  if (node.semanticTag) return false;
 
   return true;
 }

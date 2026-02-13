@@ -1,11 +1,11 @@
 import { v4 as uuidv4 } from "uuid";
-import type { SimplifiedNode, BoundingBox } from "../../../types/extractor-types.js";
+import type { SimplifiedNode } from "../../../types/extractor-types.js";
+import type { BoundingBox } from "../../../types/simplified-types.js";
 import { getUnionRect } from "../../../utils/geometry.js";
 
 export interface CreateVirtualFrameOptions {
   name?: string;
-  type?: string; // Default: "FRAME"
-  semanticTag?: string;
+  type?: "CONTAINER";
   layoutMode?: "relative" | "absolute";
   layout?: {
     layoutMode: "HORIZONTAL" | "VERTICAL";
@@ -25,8 +25,7 @@ export interface CreateVirtualFrameOptions {
 export function createVirtualFrame(options: CreateVirtualFrameOptions): SimplifiedNode {
   const { 
     name = "Virtual Container", 
-    type = "FRAME",
-    semanticTag,
+    type = "CONTAINER",
     layoutMode = "relative",
     layout,
     children,
@@ -40,7 +39,6 @@ export function createVirtualFrame(options: CreateVirtualFrameOptions): Simplifi
     id: `virtual-${uuidv4()}`,
     name,
     type,
-    semanticTag,
     layoutMode,
     absRect: unionRect,
     children,

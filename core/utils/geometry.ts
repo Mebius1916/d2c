@@ -1,6 +1,18 @@
+import type { SimplifiedNode } from "../types/extractor-types.js";
 import type { BoundingBox } from "../types/simplified-types.js";
 
-export type { BoundingBox };
+// 获取节点的几何信息
+export function getNodeBoundingBox(node: SimplifiedNode): BoundingBox | null {
+  if (node.absRect) {
+    return {
+      x: node.absRect.x,
+      y: node.absRect.y,
+      width: node.absRect.width,
+      height: node.absRect.height,
+    };
+  }
+  return null;
+}
 
 // 计算矩形的面积
 export function getRectArea(rect: BoundingBox | undefined | null): number {

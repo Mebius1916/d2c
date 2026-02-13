@@ -8,41 +8,42 @@ import { flattenRedundantNodes } from "../algorithms/flattening.js";
 import type { SimplifiedNode, TraversalContext } from "../../types/extractor-types.js";
 
 /**
- * Runs the full structure reconstruction pipeline on a list of nodes.
- * This pipeline is applied to:
- * 1. Children of each node during recursive processing (node-processor.ts)
- * 2. Root nodes at the end of the top-level traversal (node-walker.ts)
- * 
- * @param nodes The list of sibling nodes to process
- * @param globalVars Global variables (styles) needed for some algorithms like flattening
- * @returns The optimized and restructured list of nodes
+ * Phase 1: Structure Optimization Pipeline
  */
-export function runReconstructionPipeline(
+export function runStructurePipeline(nodes: SimplifiedNode[]): SimplifiedNode[] {
+  if (nodes.length === 0) return [];
+
+  // 1. Occlusion Culling
+  let processedNodes = removeOccludedNodes(nodes);
+
+  // 2. Spatial Merging
+  processedNodes = mergeSpatialIcons(processedNodes);
+
+  // 3. Reparenting
+  processedNodes = reparentNodes(processedNodes);
+
+  return processedNodes;
+}
+
+/**
+ * Phase 2: Layout Inference Pipeline
+ */
+export function runLayoutPipeline(
   nodes: SimplifiedNode[],
   globalVars?: TraversalContext["globalVars"]
 ): SimplifiedNode[] {
   if (nodes.length === 0) return [];
 
-  // 1. Occlusion Culling: Remove nodes hidden by opaque siblings
-  let processedNodes = removeOccludedNodes(nodes);
+  // 1. Layout Grouping
+  let processedNodes = groupNodesByLayout(nodes);
 
-  // 2. Spatial Merging: Merge scattered vector paths into icons
-  processedNodes = mergeSpatialIcons(processedNodes);
-
-  // 3. Reparenting: Fix parent-child relationships based on visual containment
-  processedNodes = reparentNodes(processedNodes);
-
-  // 4. Layout Grouping: Convert absolute layout to Flexbox (Row/Column)
-  processedNodes = groupNodesByLayout(processedNodes);
-
-  // 5. List Inference: Detect repeating patterns and wrap in List containers
+  // 2. List Inference
   processedNodes = inferListPatterns(processedNodes);
 
-  // 6. Adjacency Clustering: Group remaining loose items (e.g. Title + Subtitle)
+  // 3. Adjacency Clustering
   processedNodes = groupNodesByAdjacency(processedNodes);
 
-  // 7. Flattening: Remove redundant wrapper frames
-  // Requires globalVars to check for styles/padding
+  // 4. Flattening
   if (globalVars) {
     processedNodes = flattenRedundantNodes(processedNodes, globalVars);
   }

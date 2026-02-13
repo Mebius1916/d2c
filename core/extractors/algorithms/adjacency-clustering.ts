@@ -68,10 +68,9 @@ export function groupNodesByAdjacency(nodes: SimplifiedNode[]): SimplifiedNode[]
       // Create a virtual group for the cluster
       const group = createVirtualFrame({
         name: "Content Group",
-        type: "GROUP", // Use GROUP for loose semantic coupling
+        type: "CONTAINER", // Use GROUP for loose semantic coupling
         layoutMode: "relative",
         children: clusterItems.map(item => item.node),
-        semanticTag: "content-group"
       });
       
       // 最小索引插入
@@ -92,10 +91,10 @@ export function groupNodesByAdjacency(nodes: SimplifiedNode[]): SimplifiedNode[]
 function isClusterCandidate(node: SimplifiedNode): boolean {
   if (!node.absRect) return false;
   // Don't cluster existing structural frames
-  if (node.type === "FRAME" || node.type === "GROUP") {
+  if (node.type === "CONTAINER") {
     // Exception: Small frames might be icons or buttons
     const area = node.absRect.width * node.absRect.height;
-    if (area > 100 * 100) return false; 
+    if (area > 100 * 100) return false; // options
   }
   return true;
 }

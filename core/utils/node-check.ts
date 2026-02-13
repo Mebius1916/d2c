@@ -1,25 +1,25 @@
 import type { SimplifiedNode } from "../types/extractor-types.js";
 
 /**
- * Checks if a SimplifiedNode is "empty" and can be safely pruned.
- * An empty node is one that:
- * 1. Has no children (caller must ensure this check before calling)
- * 2. Has no visual styles (fills, strokes, effects)
- * 3. Has no semantic meaning (tag)
- * 4. Is not a specific type that must be preserved (e.g. TEXT, IMAGE)
+ * Checks if a node should be pruned from the tree.
+ * A node should be pruned if:
+ * 1. It has no children
+ * 2. It is visually empty (no styles, no semantic meaning)
+ * 3. It is not a content node (Text, Image, SVG)
  */
-export function isNodeEmpty(node: SimplifiedNode): boolean {
-  // Never prune content nodes
-  if (node.type === "TEXT" || node.type === "IMAGE" || node.type === "IMAGE-SVG" || node.type === "SVG") {
+export function shouldPruneNode(node: SimplifiedNode): boolean {
+  // 1. Check children
+  const hasChildren = node.children && node.children.length > 0;
+  if (hasChildren) {
     return false;
   }
 
-  // Preserve semantic nodes
-  if (node.semanticTag) {
+  // 2. Never prune content nodes
+  if (node.type === "TEXT" || node.type === "IMAGE" || node.type === "SVG") {
     return false;
   }
 
-  // Check for visual styles using the unified helper
+  // 3. Check for visual styles
   if (hasVisibleStyles(node)) {
     return false;
   }

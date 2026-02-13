@@ -1,7 +1,7 @@
 import type { SimplifiedNode } from "../../types/extractor-types.js";
-import type { BoundingBox } from "../../utils/geometry.js";
-import { subtractRect } from "../../utils/geometry.js";
+import { subtractRect, getNodeBoundingBox } from "../../utils/geometry.js";
 import { hasVisibleStyles } from "../../utils/node-check.js";
+import type { BoundingBox } from "../../types/simplified-types.js";
 
 export function removeOccludedNodes(nodes: SimplifiedNode[]): SimplifiedNode[] {
   if (nodes.length === 0) return [];
@@ -53,7 +53,7 @@ export function removeOccludedNodes(nodes: SimplifiedNode[]): SimplifiedNode[] {
 
 function hasVisibleContentInRegions(node: SimplifiedNode, regions: BoundingBox[]): boolean {
   // 1. Leaf Nodes (Text, Icon, Image) are inherently visible if they are not fully occluded.
-  if (node.type === "TEXT" || node.type === "SVG" || node.type === "IMAGE" || node.type === "IMAGE-SVG") {
+  if (node.type === "TEXT" || node.type === "SVG" || node.type === "IMAGE") {
     return true;
   }
 
@@ -86,23 +86,10 @@ function hasVisibleContentInRegions(node: SimplifiedNode, regions: BoundingBox[]
   return false;
 }
 
-// Extract geometry from node
-function getNodeBoundingBox(node: SimplifiedNode): BoundingBox | null {
-  if (node.absRect) {
-    return {
-      x: node.absRect.x,
-      y: node.absRect.y,
-      width: node.absRect.width,
-      height: node.absRect.height,
-    };
-  }
-  return null;
-}
-
 // Check if node is opaque (blocks vision)
 function isOpaque(node: SimplifiedNode): boolean {
   // 1. Type Check: Non-rectangular shapes are never opaque occluders
-  if (node.type === "TEXT" || node.type === "SVG" || node.type === "IMAGE-SVG") return false;
+  if (node.type === "TEXT" || node.type === "SVG") return false;
   
   // 2. Opacity Check: Must be fully opaque
   if (node.opacity !== undefined && node.opacity < 1) return false;

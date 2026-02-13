@@ -9,18 +9,12 @@
      计算行列组面积的方差，方差越小，说明元素的面积越相似。
 */
 import type { SimplifiedNode } from "../../types/extractor-types.js";
-import { getUnionRect, type BoundingBox } from "../../utils/geometry.js";
+import { getUnionRect } from "../../utils/geometry.js";
 import { createVirtualFrame } from "./utils/virtual-node.js";
 import { calculateLayoutGap } from "./utils/dynamic-threshold.js";
+import type { BoundingBox } from "../../types/simplified-types.js";
 
 export function groupNodesByLayout(nodes: SimplifiedNode[]): SimplifiedNode[] {
-  // 0. Recursively process children first (Bottom-Up Traversal)
-  nodes.forEach(node => {
-    if (node.children && node.children.length > 0) {
-      node.children = groupNodesByLayout(node.children);
-    }
-  });
-
   // 排除绝对定位的节点
   const flowNodes = nodes.filter(n => n.layoutMode !== "absolute");
   const absoluteNodes = nodes.filter(n => n.layoutMode === "absolute");
@@ -83,11 +77,11 @@ export function groupNodesByLayout(nodes: SimplifiedNode[]): SimplifiedNode[] {
       if (processedGroup.length === 1) {
          const child = processedGroup[0];
          // 如果孩子也是 Row，直接返回孩子（去壳）
-         if (child.type === "FRAME" && child.name === "Row") {
+         if (child.type === "CONTAINER" && child.name === "Row") {
             return child;
          }
          // 如果孩子是普通节点，包一层
-         if (child.type !== "FRAME") {
+         if (child.type !== "CONTAINER") {
             return createVirtualContainer(processedGroup, "row");
          }
          return child;
@@ -105,10 +99,10 @@ export function groupNodesByLayout(nodes: SimplifiedNode[]): SimplifiedNode[] {
       // 优化：防止冗余嵌套 (Column inside Column)
       if (processedGroup.length === 1) {
          const child = processedGroup[0];
-         if (child.type === "FRAME" && child.name === "Column") {
+         if (child.type === "CONTAINER" && child.name === "Column") {
             return child;
          }
-         if (child.type !== "FRAME") {
+         if (child.type !== "CONTAINER") {
             return createVirtualContainer(processedGroup, "column");
          }
          return child;
@@ -124,11 +118,8 @@ export function groupNodesByLayout(nodes: SimplifiedNode[]): SimplifiedNode[] {
 
 /**
  * 计算相似度代价 (Similarity Cost)
- * 对应图中的 "1.3 对比行列相似度"
- * 
- * 核心逻辑：计算分组的“尺寸一致性”。
- * 如果切出来的每一组大小都差不多（方差小），说明这个方向切对了结构（比如 Grid 的列）。
- * 如果切出来的大小差异巨大，说明可能切得不对劲。
+ * 使用变异系数 (CV) 进行无量纲化评分
+ * CV = 标准差 / 平均值
  */
 function calculateSimilarityCost(groups: SimplifiedNode[][]): number {
   if (groups.length <= 1) return 0;
@@ -140,30 +131,29 @@ function calculateSimilarityCost(groups: SimplifiedNode[][]): number {
     return union ? union.width * union.height : 0;
   });
 
-  // 计算平均面积
+  // 计算统计量
   const avgArea = areas.reduce((a, b) => a + b, 0) / areas.length;
   if (avgArea === 0) return 0;
 
-  const variance = areas.reduce((sum, area) => sum + Math.pow(area - avgArea, 2), 0);
+  const variance = areas.reduce((sum, area) => sum + Math.pow(area - avgArea, 2), 0) / areas.length;
+  const stdDev = Math.sqrt(variance);
   
-  // 计算面积方差 (Variance)
-  return variance / (Math.pow(avgArea, 2) * groups.length);
+  // 返回变异系数 (CV)
+  return stdDev / avgArea;
 }
 
 /**
  * 计算对齐代价 (Alignment Cost)
- * 对应图中的 "1.2 对比行列斜率"
- * 
- * 如果是 Row 分组，我们希望每一行内部的元素在垂直方向上高度对齐 (Top/Center/Bottom 一致)。
- * 如果参差不齐，说明这可能不是真正的行。
+ * 使用变异系数 (CV) 进行无量纲化评分
  */
 function calculateAlignmentCost(groups: SimplifiedNode[][], direction: "row" | "column"): number {
-  let totalCost = 0;
+  let totalCV = 0;
+  let validGroups = 0;
 
   for (const group of groups) {
     if (group.length <= 1) continue;
 
-    // 计算该组所有节点的中心点平均值
+    // 计算该组所有节点的中心点
     const centers = group.map(n => {
       if (!n.absRect) return 0;
       return direction === "row" 
@@ -172,35 +162,39 @@ function calculateAlignmentCost(groups: SimplifiedNode[][], direction: "row" | "
     });
     
     const avgCenter = centers.reduce((a, b) => a + b, 0) / centers.length;
+    if (avgCenter === 0) continue;
 
-    const variance = centers.reduce((sum, c) => sum + Math.pow(c - avgCenter, 2), 0);
+    const variance = centers.reduce((sum, c) => sum + Math.pow(c - avgCenter, 2), 0) / centers.length;
+    const stdDev = Math.sqrt(variance);
   
-    // 计算方差 (variance / group.length) 作为代价
-    totalCost += variance / group.length;
+    // 累加该组的 CV
+    totalCV += stdDev / Math.abs(avgCenter);
+    validGroups++;
   }
 
-  // 平均每组的代价
-  return totalCost / groups.length;
+  // 返回平均 CV
+  return validGroups > 0 ? totalCV / validGroups : 0;
 }
 
+// 分行或者分列，根据投影轴和最小间隔进行切片
 function splitByProjection(nodes: SimplifiedNode[], axis: "x" | "y", minGap: number): SimplifiedNode[][] {
   if (nodes.length === 0) return [];
 
-  nodes.sort((a, b) => getStart(a, axis) - getStart(b, axis));
+  // 排序：按起始坐标从小到大
+  nodes.sort((a, b) => getRange(a, axis).start - getRange(b, axis).start);
 
   const groups: SimplifiedNode[][] = [];
   let currentGroup: SimplifiedNode[] = [nodes[0]];
-  let currentEnd = getEnd(nodes[0], axis);
+  let currentEnd = getRange(nodes[0], axis).end;
 
   for (let i = 1; i < nodes.length; i++) {
     const node = nodes[i];
-    const start = getStart(node, axis);
-    const end = getEnd(node, axis);
+    const { start, end } = getRange(node, axis);
 
-    // Check for gap using dynamic threshold
+    // 是否分列
     if (start > currentEnd + minGap) {
       groups.push(currentGroup);
-      currentGroup = [node];
+      currentGroup = [node]; // 恢复现场
       currentEnd = end;
     } else {
       currentGroup.push(node);
@@ -212,20 +206,17 @@ function splitByProjection(nodes: SimplifiedNode[], axis: "x" | "y", minGap: num
   return groups;
 }
 
-function getStart(node: SimplifiedNode, axis: "x" | "y"): number {
-  return node.absRect ? node.absRect[axis] : 0;
-}
-
-function getEnd(node: SimplifiedNode, axis: "x" | "y"): number {
-  if (!node.absRect) return 0;
+function getRange(node: SimplifiedNode, axis: "x" | "y"): { start: number; end: number } {
+  if (!node.absRect) return { start: 0, end: 0 };
+  const start = node.absRect[axis];
   const size = axis === "x" ? node.absRect.width : node.absRect.height;
-  return node.absRect[axis] + size;
+  return { start, end: start + size };
 }
 
 function createVirtualContainer(children: SimplifiedNode[], direction: "row" | "column"): SimplifiedNode {
   return createVirtualFrame({
     name: direction === "row" ? "Row" : "Column",
-    type: "FRAME",
+    type: "CONTAINER",
     layout: {
       layoutMode: direction === "row" ? "HORIZONTAL" : "VERTICAL",
       primaryAxisAlignItems: "MIN",

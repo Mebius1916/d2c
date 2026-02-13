@@ -1,21 +1,11 @@
 import type { SimplifiedNode } from "../../types/extractor-types.js";
+import type { BoundingBox } from "../../types/simplified-types.js";
 import { createVirtualFrame } from "./utils/virtual-node.js";
-import { areRectsTouching, type BoundingBox } from "../../utils/geometry.js";
+import { areRectsTouching } from "../../utils/geometry.js";
 import { UnionFind } from "./utils/union-find.js";
 
 const SPATIAL_MERGE_THRESHOLD = 80; // Max size for an icon
 const MERGE_DISTANCE = 2; // Max distance in pixels to consider "touching"
-
-// Primitives that can be merged into an icon
-const MERGEABLE_TYPES = new Set([
-  "VECTOR",
-  "ELLIPSE",
-  "RECTANGLE",
-  "STAR",
-  "POLYGON",
-  "LINE",
-  "BOOLEAN_OPERATION"
-]);
 
 export function mergeSpatialIcons(nodes: SimplifiedNode[]): SimplifiedNode[] {
   if (nodes.length < 2) return nodes;
@@ -77,7 +67,7 @@ export function mergeSpatialIcons(nodes: SimplifiedNode[]): SimplifiedNode[] {
 // 合法性检测
 function isMergeCandidate(node: SimplifiedNode): boolean {
   if (!node.absRect) return false; // Must have layout info
-  if (!MERGEABLE_TYPES.has(node.type)) return false; // Must be vector type
+  if (node.type !== "SVG") return false; // Must be vector type
   
   // Check size
   if (node.absRect.width > SPATIAL_MERGE_THRESHOLD || node.absRect.height > SPATIAL_MERGE_THRESHOLD) {
@@ -91,8 +81,7 @@ function isMergeCandidate(node: SimplifiedNode): boolean {
 function createMergedIconNode(parts: SimplifiedNode[]): SimplifiedNode {
   return createVirtualFrame({
     name: "Merged Icon",
-    type: "GROUP",
-    semanticTag: "icon",
+    type: "CONTAINER",
     children: parts,
     layoutMode: "relative"
   });

@@ -56,8 +56,7 @@ export interface SimplifiedDesign {
 export interface SimplifiedNode {
   id: string;
   name: string;
-  type: string; // e.g. FRAME, TEXT, INSTANCE, RECTANGLE, SVG, IMAGE etc.
-  semanticTag?: string; // e.g. "icon", "button", "input"
+  type: "SVG" | "TEXT" | "CONTAINER" | "IMAGE";
   src?: string; // For IMAGE nodes
   // Geometry for occlusion detection
   absRect?: {
@@ -95,5 +94,3 @@ export interface SimplifiedNode {
   // visual fingerprint for list inference
   visualSignature?: string;
 }
-
-export type { BoundingBox } from "./simplified-types.js";
