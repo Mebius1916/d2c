@@ -42,6 +42,8 @@ function isRedundant(
   // Must have no visual styles
   if (hasVisibleStyles(node)) return false;
 
+  if (node.semanticTag) return false;
+
   // Must have no layout impact (padding)
   if (hasLayoutImpact(node, globalVars)) return false;
 
@@ -54,13 +56,19 @@ function hasLayoutImpact(
 ): boolean {
   if (!node.layout) return false;
 
-  // If layout is just a string ID, resolve it
-  if (typeof node.layout === 'string') {
-    const layoutStyle = globalVars.styles[node.layout];
-    if (!layoutStyle) return false; // Should not happen, but safe fallback
-    const layout = layoutStyle as any; 
-    if (layout.padding && layout.padding !== '0px') return true;
-  }
-
+  const resolvedLayout = typeof node.layout === 'string'
+    ? globalVars.styles[node.layout]
+    : node.layout;
+  if (!resolvedLayout) return false;
+  const layout = resolvedLayout as any;
+  if (layout.padding && layout.padding !== '0px' && layout.padding !== '0') return true;
+  if (layout.gap && layout.gap !== '0px' && layout.gap !== '0') return true;
+  if (layout.wrap) return true;
+  if (layout.justifyContent || layout.alignItems || layout.alignSelf) return true;
+  if (layout.position === 'absolute') return true;
+  if (layout.locationRelativeToParent) return true;
+  if (layout.dimensions && (layout.dimensions.width || layout.dimensions.height || layout.dimensions.aspectRatio)) return true;
+  if (layout.sizing && (layout.sizing.horizontal || layout.sizing.vertical)) return true;
+  if (layout.overflowScroll && layout.overflowScroll.length > 0) return true;
   return false;
 }

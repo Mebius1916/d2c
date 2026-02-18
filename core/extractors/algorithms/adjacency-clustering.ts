@@ -3,11 +3,11 @@ import { createVirtualFrame } from "./utils/virtual-node.js";
 import { areRectsTouching } from "../../utils/geometry.js";
 import { UnionFind } from "./utils/union-find.js";
 import { calculateAdjacencyThreshold } from "./utils/dynamic-threshold.js";
+import { isClusterCandidate } from "../../utils/candidate-check.js";
 
 export function groupNodesByAdjacency(nodes: SimplifiedNode[]): SimplifiedNode[] {
-  // 0. Recursively process children first (Bottom-Up Traversal)
-  nodes.forEach(node => {
-    if (node.children && node.children.length > 0) {
+  nodes.forEach((node) => {
+    if (node.dirty && node.children && node.children.length > 0) {
       node.children = groupNodesByAdjacency(node.children);
     }
   });
@@ -68,7 +68,8 @@ export function groupNodesByAdjacency(nodes: SimplifiedNode[]): SimplifiedNode[]
       // Create a virtual group for the cluster
       const group = createVirtualFrame({
         name: "Content Group",
-        type: "CONTAINER", // Use GROUP for loose semantic coupling
+        type: "CONTAINER",
+        semanticTag: "group",
         layoutMode: "relative",
         children: clusterItems.map(item => item.node),
       });
@@ -85,16 +86,4 @@ export function groupNodesByAdjacency(nodes: SimplifiedNode[]): SimplifiedNode[]
 
   // 按索引顺序排序，排序后剔除索引对象
   return finalNodesWithOrder.sort((a, b) => a.index - b.index).map(x => x.node);
-}
-
-// 判断合法性
-function isClusterCandidate(node: SimplifiedNode): boolean {
-  if (!node.absRect) return false;
-  // Don't cluster existing structural frames
-  if (node.type === "CONTAINER") {
-    // Exception: Small frames might be icons or buttons
-    const area = node.absRect.width * node.absRect.height;
-    if (area > 100 * 100) return false; // options
-  }
-  return true;
 }

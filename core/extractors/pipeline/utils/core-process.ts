@@ -49,11 +49,19 @@ export function processNodes(
       };
 
       if (hasValue("children", node) && node.children.length > 0) {
-        // Direct recursive call with array input
         const children = processNodes(node.children, childContext, postProcessor);
+        // 5. Post-Process Children (Optional)
+        const processedChildren = postProcessor ? postProcessor(children) : children;
+        // 剪枝：移除空容器
+        const prunedChildren = processedChildren.filter((child) => {
+          if (child.type === "CONTAINER") {
+            return !shouldPruneNode(child);
+          }
+          return true;
+        });
 
-        if (children.length > 0) {
-          result.children = postProcessor ? postProcessor(children) : children;
+        if (prunedChildren.length > 0) {
+          result.children = prunedChildren;
         }
       }
     }

@@ -4,6 +4,7 @@
 
 import type { SimplifiedNode } from "../../types/extractor-types.js";
 import { getRectArea, isRectContained, areRectsTouching } from "../../utils/geometry.js";
+import { canBeParent } from "../../utils/candidate-check.js";
 
 export function reparentNodes(nodes: SimplifiedNode[]): SimplifiedNode[] {
   if (nodes.length === 0) return [];
@@ -46,6 +47,7 @@ export function reparentNodes(nodes: SimplifiedNode[]): SimplifiedNode[] {
     if (childrenToAdopt.length > 0) {
       if (!parent.children) parent.children = [];
       parent.children.push(...childrenToAdopt);
+      parent.dirty = true;
     }
 
     processingNodes.length = 0;
@@ -82,16 +84,4 @@ function detectAbsoluteChildrenInList(nodes: SimplifiedNode[]) {
       }
     }
   }
-}
-
-function canBeParent(node: SimplifiedNode): boolean {
-  const NON_CONTAINERS = new Set([
-    "TEXT", 
-    "SVG", 
-    "IMAGE"
-  ]);
-  
-  if (NON_CONTAINERS.has(node.type)) return false;
-  
-  return true;
 }

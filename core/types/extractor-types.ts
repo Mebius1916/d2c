@@ -91,6 +91,8 @@ export interface SimplifiedNode {
   componentProperties?: ComponentProperties[];
   // children
   children?: SimplifiedNode[];
+  semanticTag?: "list" | "icon" | "group";
   // visual fingerprint for list inference
   visualSignature?: string;
+  dirty?: boolean;
 }

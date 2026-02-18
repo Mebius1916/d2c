@@ -8,9 +8,12 @@ import { flattenRedundantNodes } from "../algorithms/flattening.js";
 import type { SimplifiedNode, TraversalContext } from "../../types/extractor-types.js";
 
 /**
- * Phase 1: Structure Optimization Pipeline
+ * Structure + Layout Pipeline
  */
-export function runStructurePipeline(nodes: SimplifiedNode[]): SimplifiedNode[] {
+export function runReconstructionPipeline(
+  nodes: SimplifiedNode[],
+  globalVars?: TraversalContext["globalVars"]
+): SimplifiedNode[] {
   if (nodes.length === 0) return [];
 
   // 1. Occlusion Culling
@@ -22,28 +25,16 @@ export function runStructurePipeline(nodes: SimplifiedNode[]): SimplifiedNode[] 
   // 3. Reparenting
   processedNodes = reparentNodes(processedNodes);
 
-  return processedNodes;
-}
+  // 4. Layout Grouping
+  processedNodes = groupNodesByLayout(processedNodes);
 
-/**
- * Phase 2: Layout Inference Pipeline
- */
-export function runLayoutPipeline(
-  nodes: SimplifiedNode[],
-  globalVars?: TraversalContext["globalVars"]
-): SimplifiedNode[] {
-  if (nodes.length === 0) return [];
-
-  // 1. Layout Grouping
-  let processedNodes = groupNodesByLayout(nodes);
-
-  // 2. List Inference
+  // 5. List Inference
   processedNodes = inferListPatterns(processedNodes);
 
-  // 3. Adjacency Clustering
+  // 6. Adjacency Clustering
   processedNodes = groupNodesByAdjacency(processedNodes);
 
-  // 4. Flattening
+  // 7. Flattening
   if (globalVars) {
     processedNodes = flattenRedundantNodes(processedNodes, globalVars);
   }

@@ -3,6 +3,7 @@ import type { BoundingBox } from "../../types/simplified-types.js";
 import { createVirtualFrame } from "./utils/virtual-node.js";
 import { areRectsTouching } from "../../utils/geometry.js";
 import { UnionFind } from "./utils/union-find.js";
+import { isMergeCandidate } from "../../utils/candidate-check.js";
 
 const SPATIAL_MERGE_THRESHOLD = 80; // Max size for an icon
 const MERGE_DISTANCE = 2; // Max distance in pixels to consider "touching"
@@ -15,7 +16,7 @@ export function mergeSpatialIcons(nodes: SimplifiedNode[]): SimplifiedNode[] {
 
   // 1. Filter candidates
   nodes.forEach((node, i) => {
-    if (isMergeCandidate(node)) {
+    if (isMergeCandidate(node, SPATIAL_MERGE_THRESHOLD)) {
       candidates.push({ index: i, rect: node.absRect!, node });
     } else {
       nonCandidates.push({ index: i, node });
@@ -64,24 +65,12 @@ export function mergeSpatialIcons(nodes: SimplifiedNode[]): SimplifiedNode[] {
   return finalNodes.sort((a, b) => a.sortIdx - b.sortIdx).map(n => n.node);
 }
 
-// 合法性检测
-function isMergeCandidate(node: SimplifiedNode): boolean {
-  if (!node.absRect) return false; // Must have layout info
-  if (node.type !== "SVG") return false; // Must be vector type
-  
-  // Check size
-  if (node.absRect.width > SPATIAL_MERGE_THRESHOLD || node.absRect.height > SPATIAL_MERGE_THRESHOLD) {
-    return false;
-  }
-
-  return true;
-}
-
 // 计算所有碎片的总包围矩形
 function createMergedIconNode(parts: SimplifiedNode[]): SimplifiedNode {
   return createVirtualFrame({
     name: "Merged Icon",
     type: "CONTAINER",
+    semanticTag: "icon",
     children: parts,
     layoutMode: "relative"
   });

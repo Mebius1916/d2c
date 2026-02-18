@@ -15,7 +15,9 @@ export interface CreateVirtualFrameOptions {
   };
   children: SimplifiedNode[];
   // Additional props
+  semanticTag?: "list" | "icon" | "group";
   visualSignature?: string;
+  dirty?: boolean;
 }
 
 /**
@@ -29,7 +31,9 @@ export function createVirtualFrame(options: CreateVirtualFrameOptions): Simplifi
     layoutMode = "relative",
     layout,
     children,
-    visualSignature 
+    semanticTag,
+    visualSignature,
+    dirty
   } = options;
 
   const rects = children.map(c => c.absRect).filter((r): r is BoundingBox => !!r);
@@ -42,7 +46,9 @@ export function createVirtualFrame(options: CreateVirtualFrameOptions): Simplifi
     layoutMode,
     absRect: unionRect,
     children,
-    visualSignature
+    semanticTag,
+    visualSignature,
+    dirty
   };
 
   if (layout) {

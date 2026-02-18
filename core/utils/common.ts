@@ -1,6 +1,4 @@
 import { v4 as uuidv4 } from "uuid";
-import type { Node as FigmaDocumentNode } from "@figma/rest-api-spec";
-import type { TraversalContext } from "../types/extractor-types.js";
 
 export type StyleId = `${string}_${string}` & { __brand: "StyleId" };
 

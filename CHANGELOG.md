@@ -1,5 +1,55 @@
 # 更新日志 (CHANGELOG)
 
+## [v0.1.13] - 2026-02-18
+
+### 结构重建与管线收敛
+
+> **涉及文件**:
+>
+> - `core/extractors/pipeline/reconstruction.ts` (合并: 结构/布局流水线)
+> - `core/extractors/pipeline/node-processor.ts` (优化: 单次递归调用)
+> - `core/extractors/pipeline/utils/core-process.ts` (优化: 子树后处理 + 空容器剪枝)
+> - `core/types/extractor-types.ts` (新增: `semanticTag`/`dirty`)
+> - `core/utils/candidate-check.ts` (新增: 候选判定工具)
+
+- **流水线收敛**:
+  - 将结构重建与布局推断合并为单一 `runReconstructionPipeline`，减少二次遍历。
+  - 子树后处理统一在 `core-process` 内执行，并集中进行空容器剪枝。
+  - 清理 `extraStyles` 临时缓存，降低内存占用。
+
+### 结构推断算法增强
+
+> **涉及文件**:
+>
+> - `core/extractors/algorithms/adjacency-clustering.ts`
+> - `core/extractors/algorithms/layout-grouping.ts`
+> - `core/extractors/algorithms/list-inference.ts`
+> - `core/extractors/algorithms/reparenting.ts`
+> - `core/extractors/algorithms/spatial-merging.ts`
+> - `core/extractors/algorithms/flattening.ts`
+> - `core/extractors/algorithms/utils/list-pattern.ts`
+> - `core/extractors/algorithms/utils/fingerprint.ts`
+> - `core/extractors/algorithms/utils/virtual-node.ts`
+
+- **相邻成组**: 统一候选判断逻辑，虚拟分组节点标记 `semanticTag: "group"`，仅在 `dirty` 节点上递归处理。
+- **布局分组**: 投影切割改用统一包围盒获取，虚拟 Row/Column 标记 `dirty`。
+- **列表推导**: 提取重复模式挖掘至 `list-pattern`，支持断裂重复模式与 item 组包裹。
+- **父子重组**: 复用 `canBeParent` 工具，并在吸收子节点后标记 `dirty`。
+- **图标合并**: 复用 `isMergeCandidate` 工具，合并结果标注 `semanticTag: "icon"`。
+- **扁平化**: 扩展 layout 影响判定（gap、wrap、对齐、尺寸、定位、溢出等），并保护语义容器不被扁平化。
+- **指纹升级**: 视觉指纹改为 FNV-1a 哈希，加入尺寸/圆角量化、稳定序列化与子节点签名。
+- **虚拟节点**: 支持 `semanticTag` 与 `dirty` 透传，用于后续阶段识别。
+
+### HTML 生成路径调整
+
+> **涉及文件**:
+>
+> - `core/codegen/generators/html-generator.ts` (删除: 旧入口)
+> - `core/codegen/generators/html/html-generator.ts` (现入口)
+> - `run-codegen.ts` (更新: import 路径)
+
+- **路径调整**: HTML 生成器迁移至 `generators/html/`，运行入口同步更新。
+
 ## [v0.1.12] - 2026-02-13
 
 ### 节点清理与空容器剪枝优化

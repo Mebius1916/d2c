@@ -1,20 +1,17 @@
 
-/*
-  切片逻辑只会发生在同一层级，切片后按行列进行分组，
-  根据行列元素的位置关系进行打分，取分数较低的方向作为布局方向。
-  打分算法分为两个方面：
-  1. 对齐代价 (Alignment Cost)：
-     计算行列组中心点的偏差值（斜率），偏差值越小，说明对齐越紧密。
-  2. 相似度代价 (Similarity Cost)：
-     计算行列组面积的方差，方差越小，说明元素的面积越相似。
-*/
 import type { SimplifiedNode } from "../../types/extractor-types.js";
-import { getUnionRect } from "../../utils/geometry.js";
+import { getNodeBoundingBox, getUnionRect } from "../../utils/geometry.js";
 import { createVirtualFrame } from "./utils/virtual-node.js";
 import { calculateLayoutGap } from "./utils/dynamic-threshold.js";
 import type { BoundingBox } from "../../types/simplified-types.js";
 
 export function groupNodesByLayout(nodes: SimplifiedNode[]): SimplifiedNode[] {
+  nodes.forEach((node) => {
+    if (node.dirty && node.children && node.children.length > 0) {
+      node.children = groupNodesByLayout(node.children);
+    }
+  });
+
   // 排除绝对定位的节点
   const flowNodes = nodes.filter(n => n.layoutMode !== "absolute");
   const absoluteNodes = nodes.filter(n => n.layoutMode === "absolute");
@@ -53,7 +50,6 @@ export function groupNodesByLayout(nodes: SimplifiedNode[]): SimplifiedNode[] {
     const colAlignCost = calculateAlignmentCost(colGroups, "column");
 
     // 相似度代价：切出来的子组越像越好 (Cost 越低)
-    // 比如 3 列 Card，每列长得都很像，那么 ColSimilarityCost 就会很低
     const rowSimCost = calculateSimilarityCost(rowGroups);
     const colSimCost = calculateSimilarityCost(colGroups);
 
@@ -73,7 +69,6 @@ export function groupNodesByLayout(nodes: SimplifiedNode[]): SimplifiedNode[] {
       const processedGroup = groupNodesByLayout(group);
       
       // 优化：防止冗余嵌套 (Row inside Row)
-      // 如果 processedGroup 只有一个元素，且这个元素本身就是 Row，那直接返回它，不要再包一层 Row
       if (processedGroup.length === 1) {
          const child = processedGroup[0];
          // 如果孩子也是 Row，直接返回孩子（去壳）
@@ -181,15 +176,26 @@ function splitByProjection(nodes: SimplifiedNode[], axis: "x" | "y", minGap: num
   if (nodes.length === 0) return [];
 
   // 排序：按起始坐标从小到大
-  nodes.sort((a, b) => getRange(a, axis).start - getRange(b, axis).start);
+  nodes.sort((a, b) => {
+    const rectA = getNodeBoundingBox(a);
+    const rectB = getNodeBoundingBox(b);
+    const startA = rectA ? rectA[axis] : 0;
+    const startB = rectB ? rectB[axis] : 0;
+    return startA - startB;
+  });
 
   const groups: SimplifiedNode[][] = [];
   let currentGroup: SimplifiedNode[] = [nodes[0]];
-  let currentEnd = getRange(nodes[0], axis).end;
+  const firstRect = getNodeBoundingBox(nodes[0]);
+  let currentEnd = firstRect
+    ? firstRect[axis] + (axis === "x" ? firstRect.width : firstRect.height)
+    : 0;
 
   for (let i = 1; i < nodes.length; i++) {
     const node = nodes[i];
-    const { start, end } = getRange(node, axis);
+    const rect = getNodeBoundingBox(node);
+    const start = rect ? rect[axis] : 0;
+    const end = rect ? start + (axis === "x" ? rect.width : rect.height) : 0;
 
     // 是否分列
     if (start > currentEnd + minGap) {
@@ -206,13 +212,6 @@ function splitByProjection(nodes: SimplifiedNode[], axis: "x" | "y", minGap: num
   return groups;
 }
 
-function getRange(node: SimplifiedNode, axis: "x" | "y"): { start: number; end: number } {
-  if (!node.absRect) return { start: 0, end: 0 };
-  const start = node.absRect[axis];
-  const size = axis === "x" ? node.absRect.width : node.absRect.height;
-  return { start, end: start + size };
-}
-
 function createVirtualContainer(children: SimplifiedNode[], direction: "row" | "column"): SimplifiedNode {
   return createVirtualFrame({
     name: direction === "row" ? "Row" : "Column",
@@ -223,6 +222,7 @@ function createVirtualContainer(children: SimplifiedNode[], direction: "row" | "
       counterAxisAlignItems: "MIN",
       itemSpacing: 0,
     },
-    children: children
+    children: children,
+    dirty: true
   });
 }
