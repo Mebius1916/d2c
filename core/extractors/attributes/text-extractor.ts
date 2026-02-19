@@ -1,10 +1,5 @@
 import type { ExtractorFn, SimplifiedNode } from "../../types/extractor-types.js";
-import {
-  extractNodeText,
-  extractTextStyle,
-  hasTextStyle,
-  isTextNode,
-} from "../../transformers/text.js";
+import { extractRichTextSegments, extractTextStyle, hasTextStyle, isTextNode } from "../../transformers/text.js";
 import { findOrCreateVar, getStyleName } from "../../utils/style-helper.js";
 
 /**
@@ -15,14 +10,18 @@ export const textExtractor: ExtractorFn = (node, context) => {
 
   // Extract text content
   if (isTextNode(node)) {
-    result.text = extractNodeText(node);
-  }
+    const textStyle = hasTextStyle(node) ? extractTextStyle(node) : undefined;
+    const baseStyle = (textStyle || {}) as any;
+    let richText = textStyle ? extractRichTextSegments(node, baseStyle) : undefined;
+    if (!richText) {
+      const text = (node as any).characters as string | undefined;
+      richText = text ? [{ text, style: baseStyle }] : undefined;
+    }
+    if (richText) {
+      result.richText = richText;
+    }
 
-  // Extract text style
-  if (hasTextStyle(node)) {
-    const textStyle = extractTextStyle(node);
     if (textStyle) {
-      // Prefer Figma named style when available
       const styleName = getStyleName(node, context, ["text", "typography"]);
       if (styleName) {
         context.globalVars.styles[styleName] = textStyle;

@@ -10,6 +10,7 @@ import { simplifyComponents, simplifyComponentSets } from "../../transformers/co
 import type { SimplifiedDesign, TraversalContext, SimplifiedNode } from "../../types/extractor-types.js";
 import { extractFromDesign } from "./node-processor.js";
 import { flattenRedundantNodes } from "../algorithms/flattening.js";
+import { normalizeNodeStyles } from "../algorithms/style-normalization.js";
 
 /**
  * Extract a complete SimplifiedDesign from raw Figma API response using extractors.
@@ -28,13 +29,16 @@ export function simplifyRawFigmaObject(
     globalVars,
   );
 
-  // Run structure optimization: Flatten redundant groups
+  // 剪枝操作：拍平节点树
   const optimizedNodes = flattenRedundantNodes(extractedNodes, { styles: finalGlobalVars.styles });
+
+  // 归一化节点样式：合并所有样式引用为单一 styleId
+  const normalizedNodes = normalizeNodeStyles(optimizedNodes, finalGlobalVars);
 
   // Return complete design
   return {
     ...metadata,
-    nodes: cleanupNodes(optimizedNodes),
+    nodes: cleanupNodes(normalizedNodes),
     components: simplifyComponents(components),
     componentSets: simplifyComponentSets(componentSets),
     globalVars: { styles: finalGlobalVars.styles },

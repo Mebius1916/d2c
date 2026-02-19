@@ -4,7 +4,9 @@ import type {
   SimplifiedLayout, 
   SimplifiedFill, 
   SimplifiedStroke, 
-  SimplifiedEffects 
+  SimplifiedEffects,
+  SimplifiedNodeStyle,
+  SimplifiedCompositeStyle
 } from "./simplified-types.js";
 import type {
   ComponentProperties,
@@ -18,6 +20,8 @@ export type StyleTypes =
   | SimplifiedLayout
   | SimplifiedStroke
   | SimplifiedEffects
+  | SimplifiedNodeStyle
+  | SimplifiedCompositeStyle
   | string;
 
 export interface GlobalVars {
@@ -66,8 +70,11 @@ export interface SimplifiedNode {
     height: number;
   };
   // text
-  text?: string;
   textStyle?: string;
+  richText?: {
+    text: string;
+    style: SimplifiedTextStyle;
+  }[];
   // appearance
   fills?: string;
   styles?: string;
@@ -91,7 +98,10 @@ export interface SimplifiedNode {
   componentProperties?: ComponentProperties[];
   // children
   children?: SimplifiedNode[];
-  semanticTag?: "list" | "icon" | "group";
+  semanticTag?: 
+    "list" | "icon" | "group" | "button" | "input" | "section" | 
+    "header" | "footer" | "nav" | "article" | "aside" | "main" | 
+    "p" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
   // visual fingerprint for list inference
   visualSignature?: string;
   dirty?: boolean;

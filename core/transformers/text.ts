@@ -1,5 +1,5 @@
 import type { Node as FigmaDocumentNode } from "@figma/rest-api-spec";
-import { hasValue, isTruthy } from "../utils/identity.js";
+import { hasValue } from "../utils/identity.js";
 import type { SimplifiedTextStyle } from "../types/simplified-types.js";
 
 export { SimplifiedTextStyle };
@@ -16,26 +16,10 @@ export function hasTextStyle(
   return hasValue("style", n) && Object.keys(n.style).length > 0;
 }
 
-// Keep other simple properties directly
-export function extractNodeText(n: FigmaDocumentNode) {
-  // @ts-ignore
-  if (hasValue("characters", n, isTruthy)) {
-    return (n as any).characters;
-  }
-}
-
 export function extractTextStyle(n: FigmaDocumentNode) {
   if (hasTextStyle(n)) {
     const style = n.style;
-    
-    // Attempt to extract solid color from fills
-    let color: any = undefined;
-    if ("fills" in n && Array.isArray(n.fills) && n.fills.length > 0) {
-      const fill = n.fills[0];
-      if (fill.type === "SOLID" && fill.visible !== false) {
-        color = fill.color;
-      }
-    }
+    const color = extractSolidColorFromFills("fills" in n ? (n as any).fills : undefined);
 
     const textStyle: SimplifiedTextStyle = {
       fontFamily: style.fontFamily,
@@ -50,76 +34,92 @@ export function extractTextStyle(n: FigmaDocumentNode) {
           ? `${(style.letterSpacing / style.fontSize) * 100}%`
           : undefined,
       textCase: style.textCase,
+      textDecoration: "textDecoration" in style ? (style as any).textDecoration : undefined,
       textAlignHorizontal: style.textAlignHorizontal,
       textAlignVertical: style.textAlignVertical,
       color: color
     };
 
-    // Rich Text Extraction Simulation
-    // Since we are not in a Plugin environment (likely processing REST API JSON),
-    // we need to check for 'characterStyleOverrides' and 'styleOverrideTable'.
-    // This is how Figma REST API exposes mixed styles.
-    // @ts-ignore
-    if (n.characterStyleOverrides && n.styleOverrideTable && n.characters) {
-      const chars = (n as any).characters as string;
-      const overrides = (n as any).characterStyleOverrides as number[];
-      const overrideTable = (n as any).styleOverrideTable as Record<number, any>;
-
-      const segments: { text: string; style: SimplifiedTextStyle }[] = [];
-      
-      let currentSegmentText = "";
-      let currentStyleId = overrides[0];
-      
-      // Merge initial base style with first override
-      let currentStyle = mergeStyles(textStyle, overrideTable[currentStyleId]);
-
-      for (let i = 0; i < chars.length; i++) {
-        const styleId = overrides[i];
-        
-        // If style changes, push current segment and start new one
-        if (styleId !== currentStyleId) {
-          if (currentSegmentText) {
-            segments.push({ text: currentSegmentText, style: currentStyle });
-          }
-          currentSegmentText = chars[i];
-          currentStyleId = styleId;
-          // Merge base style with new override
-          currentStyle = mergeStyles(textStyle, overrideTable[styleId]);
-        } else {
-          currentSegmentText += chars[i];
-        }
-      }
-      
-      // Push last segment
-      if (currentSegmentText) {
-        segments.push({ text: currentSegmentText, style: currentStyle });
-      }
-
-      if (segments.length > 0) {
-        textStyle.richText = segments;
-      }
-    }
-
     return textStyle;
   }
 }
 
-// Helper to merge base style with overrides
-function mergeStyles(base: SimplifiedTextStyle, override: any): SimplifiedTextStyle {
+export function extractRichTextSegments(
+  n: FigmaDocumentNode,
+  baseStyle: SimplifiedTextStyle,
+): { text: string; style: SimplifiedTextStyle }[] | undefined {
+  const chars = (n as any).characters as string | undefined;
+  const overrides = (n as any).characterStyleOverrides as number[] | undefined;
+  const overrideTable = (n as any).styleOverrideTable as Record<number, any> | undefined;
+  if (!chars || !overrides || !overrideTable || overrides.length === 0) {
+    return undefined;
+  }
+
+  const length = Math.min(chars.length, overrides.length);
+  const segments: { text: string; style: SimplifiedTextStyle }[] = [];
+  let currentText = "";
+  let currentStyleId = overrides[0];
+  let currentStyle = mergeTextStyle(baseStyle, overrideTable[currentStyleId]);
+
+  // 拆分为不同文本样式的对象
+  for (let i = 0; i < length; i++) {
+    const styleId = overrides[i];
+    // 样式发生改变时，将当前文本样式对象加入结果数组(合并样式相同的文本)
+    if (styleId !== currentStyleId) {
+      if (currentText) {
+        segments.push({ text: currentText, style: currentStyle });
+      }
+      currentText = chars[i];
+      currentStyleId = styleId;
+      currentStyle = mergeTextStyle(baseStyle, overrideTable[styleId]);
+    } else {
+      currentText += chars[i];
+    }
+  }
+
+  // 清空当前文本样式对象
+  if (currentText) {
+    segments.push({ text: currentText, style: currentStyle });
+  }
+
+  return segments.length > 0 ? segments : undefined;
+}
+
+// override是 figma 原始字段，与 base 合并需要转换
+function mergeTextStyle(base: SimplifiedTextStyle, override: any): SimplifiedTextStyle {
   if (!override) return { ...base };
-  
-  // Map override properties (which match Figma API names) to SimplifiedTextStyle keys
-  // Note: REST API overrides often have same keys as 'style' object.
   const merged: SimplifiedTextStyle = { ...base };
-  
   if (override.fontFamily) merged.fontFamily = override.fontFamily;
   if (override.fontWeight) merged.fontWeight = override.fontWeight;
   if (override.fontSize) merged.fontSize = override.fontSize;
-  // Fills are tricky in overrides, often just 'fills' array. 
-  // For simplicity, we assume solid color override if present.
-  if (override.fills && override.fills.length > 0 && override.fills[0].type === 'SOLID') {
-    merged.color = override.fills[0].color;
+  if (override.lineHeightPx) {
+    const fontSize = override.fontSize || merged.fontSize;
+    if (fontSize) {
+      merged.lineHeight = `${override.lineHeightPx / fontSize}em`;
+    }
   }
-  
+  if (override.letterSpacing !== undefined) {
+    const fontSize = override.fontSize || merged.fontSize;
+    if (fontSize) {
+      merged.letterSpacing = `${(override.letterSpacing / fontSize) * 100}%`;
+    }
+  }
+  if (override.textCase) merged.textCase = override.textCase;
+  if (override.textDecoration) merged.textDecoration = override.textDecoration;
+  if (override.textAlignHorizontal) merged.textAlignHorizontal = override.textAlignHorizontal;
+  if (override.textAlignVertical) merged.textAlignVertical = override.textAlignVertical;
+  const color = extractSolidColorFromFills(override.fills);
+  if (color) merged.color = color;
   return merged;
+}
+
+function extractSolidColorFromFills(fills: any): any | undefined {
+  if (!Array.isArray(fills) || fills.length === 0) {
+    return undefined;
+  }
+  const fill = fills[0];
+  if (fill && fill.type === "SOLID" && fill.visible !== false) {
+    return fill.color;
+  }
+  return undefined;
 }

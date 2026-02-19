@@ -5,6 +5,7 @@ import { groupNodesByLayout } from "../algorithms/layout-grouping.js";
 import { inferListPatterns } from "../algorithms/list-inference.js";
 import { groupNodesByAdjacency } from "../algorithms/adjacency-clustering.js";
 import { flattenRedundantNodes } from "../algorithms/flattening.js";
+import { inferSemanticTags } from "../algorithms/semantic-inference.js";
 import type { SimplifiedNode, TraversalContext } from "../../types/extractor-types.js";
 
 /**
@@ -34,7 +35,10 @@ export function runReconstructionPipeline(
   // 6. Adjacency Clustering
   processedNodes = groupNodesByAdjacency(processedNodes);
 
-  // 7. Flattening
+  // 7. Semantic Inference
+  processedNodes = inferSemanticTags(processedNodes);
+
+  // 8. Flattening
   if (globalVars) {
     processedNodes = flattenRedundantNodes(processedNodes, globalVars);
   }

@@ -1,8 +1,6 @@
 import type { SimplifiedNode } from "../../../types/extractor-types.js";
 import { quantizeSize } from "./dynamic-threshold.js";
-
-const FNV_OFFSET_BASIS_32 = 2166136261;
-const FNV_PRIME_32 = 16777619;
+import { FNV_OFFSET_BASIS_32, fnv1a32Update } from "../../../utils/hash.js";
 const nodeHashCache = new WeakMap<SimplifiedNode, number>();
 
 // 生成节点可视化签名的主函数
@@ -146,19 +144,9 @@ function buildTypeSignatureParts(node: SimplifiedNode): Array<[string, string]> 
 // 将 key/value 以固定分隔注入到哈希中
 function addKeyValue(hash: number, key: string, value: string): number {
   let next = hash;
-  next = updateHash(next, key);
-  next = updateHash(next, ":");
-  next = updateHash(next, value);
-  next = updateHash(next, "|");
-  return next;
-}
-
-// 以 FNV-1a 规则更新哈希值
-function updateHash(hash: number, input: string): number {
-  let next = hash;
-  for (let i = 0; i < input.length; i++) {
-    next ^= input.charCodeAt(i);
-    next = Math.imul(next, FNV_PRIME_32);
-  }
+  next = fnv1a32Update(next, key);
+  next = fnv1a32Update(next, ":");
+  next = fnv1a32Update(next, value);
+  next = fnv1a32Update(next, "|");
   return next;
 }

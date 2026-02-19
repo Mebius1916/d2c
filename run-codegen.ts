@@ -1,5 +1,5 @@
 import * as fs from "fs";
-import { generateHTML } from "./core/codegen/generators/html/html-generator.js";
+import { generateHTML } from "./core/codegen/html/index.js";
 
 async function runCodegen() {
   try {

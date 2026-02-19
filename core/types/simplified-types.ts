@@ -41,6 +41,8 @@ export interface SimplifiedTextStyle {
   lineHeight?: string;
   letterSpacing?: string;
   textCase?: string;
+  textDecoration?: string;
+  fontStyle?: string;
   textAlignHorizontal?: string;
   textAlignVertical?: string;
   color?: any; // CSSColor or string
@@ -97,6 +99,16 @@ export interface SimplifiedPatternFill {
   backgroundRepeat: string;
   backgroundSize: string;
   backgroundPosition: string;
+}
+
+export interface SimplifiedNodeStyle {
+  opacity?: number;
+  borderRadius?: string;
+  transform?: string;
+}
+
+export interface SimplifiedCompositeStyle {
+  refs: string[];
 }
 
 export interface BoundingBox {

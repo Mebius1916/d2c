@@ -1,12 +1,9 @@
-import type { GlobalVars, StyleTypes, TraversalContext } from "../types/extractor-types.js";
+import type { GlobalVars, StyleTypes, TraversalContext, SimplifiedNode } from "../types/extractor-types.js";
 import { generateVarId } from "./common.js";
 import { hasValue } from "./identity.js";
 import type { Node as FigmaDocumentNode } from "@figma/rest-api-spec";
 
-/**
- * Helper function to find or create a global variable.
- * Optimized with O(1) lookup using a cache.
- */
+// 将一个样式对象存到全局样式表里，并返回它的 id
 export function findOrCreateVar(globalVars: GlobalVars, value: StyleTypes, prefix: string): string {
   // Initialize cache if it doesn't exist
   if (!globalVars.styleCache) {
@@ -49,4 +46,16 @@ export function getStyleName(
     }
   }
   return undefined;
+}
+
+export function addStyleRef(refs: Set<string>, value?: string) {
+  if (value) refs.add(value);
+}
+
+export function buildNodeStyle(node: SimplifiedNode): Record<string, string | number> {
+  return {
+    ...(typeof node.opacity === "number" ? { opacity: node.opacity } : {}),
+    ...(node.borderRadius ? { borderRadius: node.borderRadius } : {}),
+    ...(node.transform ? { transform: node.transform } : {}),
+  };
 }

@@ -15,7 +15,10 @@ export interface CreateVirtualFrameOptions {
   };
   children: SimplifiedNode[];
   // Additional props
-  semanticTag?: "list" | "icon" | "group";
+  semanticTag?: 
+    "list" | "icon" | "group" | "button" | "input" |
+    "section" | "header" | "footer" | "nav" | "article" |
+    "aside" | "main" | "p" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
   visualSignature?: string;
   dirty?: boolean;
 }
