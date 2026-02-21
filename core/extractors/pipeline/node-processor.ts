@@ -3,6 +3,7 @@ import type {
   TraversalContext,
   SimplifiedNode,
 } from "../../types/extractor-types.js";
+import type { ReconstructionStepFlags } from "./reconstruction.js";
 import { processNodes } from "./utils/core-process.js";
 
 /**
@@ -14,6 +15,7 @@ import { processNodes } from "./utils/core-process.js";
 export function extractFromDesign(
   nodes: any[], // Raw Figma nodes
   globalVars: TraversalContext["globalVars"] = { styles: {} },
+  options?: { reconstruction?: { enabled?: ReconstructionStepFlags } },
 ): { nodes: SimplifiedNode[]; globalVars: TraversalContext["globalVars"] } {
   const context: TraversalContext = {
     currentDepth: 0,
@@ -23,7 +25,7 @@ export function extractFromDesign(
 
   // 1. Extraction Phase (with Injected Structure Pass)
   let rootNodes = processNodes(nodes, context, (children) =>
-    runReconstructionPipeline(children, globalVars),
+    runReconstructionPipeline(children, globalVars, options?.reconstruction),
   );
 
   // 剪枝操作，减少内存占用

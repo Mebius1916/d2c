@@ -1,5 +1,5 @@
 import type { ExtractorFn, SimplifiedNode } from "../../types/extractor-types.js";
-import { buildSimplifiedStrokes, parsePaint } from "../../transformers/style.js";
+import { buildSimplifiedStrokes, parsePaint, toCssBlendMode } from "../../transformers/style.js";
 import { buildSimplifiedEffects } from "../../transformers/effects.js";
 import { hasValue, isRectangleCornerRadii } from "../../utils/identity.js";
 import { findOrCreateVar, getStyleName } from "../../utils/style-helper.js";
@@ -31,12 +31,17 @@ export const visualsExtractor: ExtractorFn = (node, context) => {
   if (strokes.colors.length) {
     const styleName = getStyleName(node, context, ["stroke", "strokes"]);
     if (styleName) {
-      // Only colors are stylable; keep other stroke props on the node
-      context.globalVars.styles[styleName] = strokes.colors;
-      result.strokes = styleName;
-      if (strokes.strokeWeight) result.strokeWeight = strokes.strokeWeight;
-      if (strokes.strokeDashes) result.strokeDashes = strokes.strokeDashes;
-      if (strokes.strokeWeights) result.strokeWeights = strokes.strokeWeights;
+      const hasExtraStrokeProps =
+        !!strokes.strokeWeight ||
+        !!strokes.strokeWeights ||
+        !!strokes.strokeDashes ||
+        !!strokes.strokeAlign;
+      if (hasExtraStrokeProps) {
+        result.strokes = findOrCreateVar(context.globalVars, strokes, "stroke");
+      } else {
+        context.globalVars.styles[styleName] = strokes.colors;
+        result.strokes = styleName;
+      }
     } else {
       result.strokes = findOrCreateVar(context.globalVars, strokes, "stroke");
     }
@@ -60,25 +65,21 @@ export const visualsExtractor: ExtractorFn = (node, context) => {
     result.opacity = node.opacity;
   }
 
+  if (hasValue("visible", node) && node.visible === false) {
+    result.visible = false;
+  }
+
+  if (hasValue("blendMode", node) && typeof node.blendMode === "string") {
+    const blendMode = toCssBlendMode(node.blendMode);
+    if (blendMode) result.blendMode = blendMode;
+  }
+
   // border radius
   if (hasValue("cornerRadius", node) && typeof node.cornerRadius === "number") {
     result.borderRadius = `${node.cornerRadius}px`;
   }
   if (hasValue("rectangleCornerRadii", node, isRectangleCornerRadii)) {
     result.borderRadius = `${node.rectangleCornerRadii[0]}px ${node.rectangleCornerRadii[1]}px ${node.rectangleCornerRadii[2]}px ${node.rectangleCornerRadii[3]}px`;
-  }
-
-  // Vector Path Extraction (for SVG generation)
-  // Check for 'vectorPaths' or 'fillGeometry'/'strokeGeometry' from REST API
-  if ("fillGeometry" in node && Array.isArray(node.fillGeometry)) {
-    // Simplified: Just take the first valid path data for now
-    const paths = node.fillGeometry
-      .filter((g: any) => g.path)
-      .map((g: any) => g.path);
-      
-    if (paths.length > 0) {
-      result.vectorPaths = paths;
-    }
   }
 
   return result;

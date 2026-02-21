@@ -8,10 +8,10 @@ export function flattenRedundantNodes(
   nodes: SimplifiedNode[],
   globalVars: SimplifiedDesign['globalVars']
 ): SimplifiedNode[] {
-  return nodes.map(node => processNode(node, globalVars));
+  return nodes.map(node => flattenNode(node, globalVars));
 }
 
-function processNode(
+function flattenNode(
   node: SimplifiedNode,
   globalVars: SimplifiedDesign['globalVars']
 ): SimplifiedNode {
@@ -61,6 +61,18 @@ function hasLayoutImpact(
     : node.layout;
   if (!resolvedLayout) return false;
   const layout = resolvedLayout as any;
+  const child = node.children?.[0];
+  const sizing = layout.sizing;
+  const hasSizing = sizing && (sizing.horizontal || sizing.vertical);
+  const dimensionOnlyKeys = ["mode", "sizing", "dimensions"];
+  const hasOnlyDimensions = Object.keys(layout).every(key => dimensionOnlyKeys.includes(key)) && !hasSizing;
+  if (hasOnlyDimensions && node.absRect && child?.absRect) {
+    const sameBounds = nearlyEqual(node.absRect.x, child.absRect.x)
+      && nearlyEqual(node.absRect.y, child.absRect.y)
+      && nearlyEqual(node.absRect.width, child.absRect.width)
+      && nearlyEqual(node.absRect.height, child.absRect.height);
+    if (sameBounds) return false;
+  }
   if (layout.padding && layout.padding !== '0px' && layout.padding !== '0') return true;
   if (layout.gap && layout.gap !== '0px' && layout.gap !== '0') return true;
   if (layout.wrap) return true;
@@ -71,4 +83,8 @@ function hasLayoutImpact(
   if (layout.sizing && (layout.sizing.horizontal || layout.sizing.vertical)) return true;
   if (layout.overflowScroll && layout.overflowScroll.length > 0) return true;
   return false;
+}
+
+function nearlyEqual(a: number, b: number, epsilon = 1): boolean {
+  return Math.abs(a - b) <= epsilon;
 }

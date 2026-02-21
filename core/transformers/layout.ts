@@ -179,10 +179,45 @@ function buildSimplifiedLayoutValues(
 
   const layoutValues: SimplifiedLayout = { mode };
 
+  if (isFrame(parent)) {
+    if (!parent.layoutMode || parent.layoutMode === "NONE") {
+      layoutValues.parentMode = "none";
+    } else if (parent.layoutMode === "HORIZONTAL") {
+      layoutValues.parentMode = "row";
+    } else {
+      layoutValues.parentMode = "column";
+    }
+  }
+
   layoutValues.sizing = {
     horizontal: convertSizing(n.layoutSizingHorizontal),
     vertical: convertSizing(n.layoutSizingVertical),
   };
+
+  if ("minWidth" in n && typeof n.minWidth === "number") {
+    layoutValues.minWidth = pixelRound(n.minWidth);
+  }
+  if ("maxWidth" in n && typeof n.maxWidth === "number") {
+    layoutValues.maxWidth = pixelRound(n.maxWidth);
+  }
+  if ("minHeight" in n && typeof n.minHeight === "number") {
+    layoutValues.minHeight = pixelRound(n.minHeight);
+  }
+  if ("maxHeight" in n && typeof n.maxHeight === "number") {
+    layoutValues.maxHeight = pixelRound(n.maxHeight);
+  }
+
+  if (n.type === "TEXT") {
+    if ("textAutoResize" in n && n.textAutoResize) {
+      layoutValues.textAutoResize = n.textAutoResize as SimplifiedLayout["textAutoResize"];
+    }
+    if ("textTruncation" in n && (n as any).textTruncation) {
+      layoutValues.textTruncation = (n as any).textTruncation;
+    }
+    if ("maxLines" in n && typeof (n as any).maxLines === "number") {
+      layoutValues.maxLines = (n as any).maxLines;
+    }
+  }
 
   // Only include positioning-related properties if parent layout isn't flex or if the node is absolute
   if (

@@ -4,7 +4,8 @@ import type {
   BlurEffect,
   Node as FigmaDocumentNode,
 } from "@figma/rest-api-spec";
-import { formatRGBAColor } from "./style";
+import { htmlColor } from "./style";
+import { resolveVariableColorName } from "./utils/text-utils.js";
 import { hasValue } from "../utils/identity.js";
 import type { SimplifiedEffects } from "../types/simplified-types.js";
 
@@ -54,11 +55,17 @@ export function buildSimplifiedEffects(n: FigmaDocumentNode): SimplifiedEffects 
 }
 
 function simplifyDropShadow(effect: DropShadowEffect) {
-  return `${effect.offset.x}px ${effect.offset.y}px ${effect.radius}px ${effect.spread ?? 0}px ${formatRGBAColor(effect.color)}`;
+  const variableName = resolveVariableColorName(effect);
+  const fallbackColor = htmlColor(effect.color, effect.color.a);
+  const color = variableName ? `var(--${variableName}, ${fallbackColor})` : fallbackColor;
+  return `${effect.offset.x}px ${effect.offset.y}px ${effect.radius}px ${effect.spread ?? 0}px ${color}`;
 }
 
 function simplifyInnerShadow(effect: InnerShadowEffect) {
-  return `inset ${effect.offset.x}px ${effect.offset.y}px ${effect.radius}px ${effect.spread ?? 0}px ${formatRGBAColor(effect.color)}`;
+  const variableName = resolveVariableColorName(effect);
+  const fallbackColor = htmlColor(effect.color, effect.color.a);
+  const color = variableName ? `var(--${variableName}, ${fallbackColor})` : fallbackColor;
+  return `inset ${effect.offset.x}px ${effect.offset.y}px ${effect.radius}px ${effect.spread ?? 0}px ${color}`;
 }
 
 function simplifyBlur(effect: BlurEffect) {

@@ -1,4 +1,4 @@
-import type { CodegenContext } from "../context.js";
+import type { CodegenContext } from "../context/index.js";
 import { generateGlobalCSS } from "./builders/css-builder.js";
 
 export function generateCSS(context: CodegenContext): string {

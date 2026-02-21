@@ -1,9 +1,9 @@
 
 import type { SimplifiedNode } from "../../../types/extractor-types.js";
-import { escapeHTML } from "../utils/escape.js";
 import { buildInlineSvg } from "../utils/svg.js";
 import { hashClassName } from "../../../utils/hash.js";
 import { getTextSegmentStyleId } from "../../css/utils/text-style.js";
+
 
 /**
  * HtmlNodeBuilder class responsible for constructing HTML for a single node.
@@ -17,8 +17,10 @@ export class HtmlNodeBuilder {
   private classes: string[] = [];
   private children: string[] = [];
   private isSelfClosing: boolean = false;
-
-  constructor(node: SimplifiedNode, globalVars?: { styles: Record<string, any>; styleCache?: Map<string, string> }) {
+  constructor(
+    node: SimplifiedNode,
+    globalVars?: { styles: Record<string, any>; styleCache?: Map<string, string> }
+  ) {
     this.node = node;
     this.globalVars = globalVars;
     this.inferSemanticTag();
@@ -103,8 +105,8 @@ export class HtmlNodeBuilder {
   }
 
   public toString(): string {
-    // 拼接 className
-    const classAttr = this.classes.length ? `class="${this.classes.join(" ")}"` : "";
+    const classAttrName = "class";
+    const classAttr = this.classes.length ? `${classAttrName}="${this.classes.join(" ")}"` : "";
     // 将 html 属性对象转化为 key="value" 序列
     const attrs = Object.entries(this.attributes)
       .map(([k, v]) => `${k}="${v}"`)
@@ -127,11 +129,12 @@ export class HtmlNodeBuilder {
     let innerHTML = "";
     if (this.node.type === "TEXT" && Array.isArray(this.node.richText)) {
       innerHTML = this.node.richText.map((segment: any) => {
-          const segmentStyleId = getTextSegmentStyleId(segment.style, this.node, this.globalVars);
-          const className = segmentStyleId ? hashClassName(segmentStyleId) : "";
-          const classAttr = className ? ` class="${className}"` : "";
-          const segmentText = escapeHTML(segment.text).split("\n").join("<br/>");
-          return `<span${classAttr}>${segmentText}</span>`;
+        const tagName = resolveRichTextTag(segment.style); // 判断富文本标签
+        const segmentText = escapeHTML(segment.text).split("\n").join("<br/>"); // 转译 html 标签
+        const segmentStyleId = getTextSegmentStyleId(segment.style, this.node, this.globalVars, segment.effects); // 获取文本样式 id
+        const className = segmentStyleId ? hashClassName(segmentStyleId) : "";
+        const segmentClassAttr = className ? ` class="${className}"` : "";
+        return `<${tagName}${segmentClassAttr}>${segmentText}</${tagName}>`;
       }).join("");
     }
     
@@ -142,4 +145,23 @@ export class HtmlNodeBuilder {
     return `${openTag}>${innerHTML}</${this.tagName}>`;
   }
 
+}
+
+// html标签转译
+function escapeHTML(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;")
+    .replace(/\n/g, "<br>");
+}
+
+// 判断富文本标签
+function resolveRichTextTag(style: any): string {
+  const features = style?.openTypeFeatures;
+  if (features?.SUBS) return "sub";
+  if (features?.SUPS) return "sup";
+  return "span";
 }

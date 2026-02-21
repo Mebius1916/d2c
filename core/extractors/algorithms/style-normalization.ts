@@ -59,7 +59,7 @@ function collectStyleRefs(
 
 // 清理节点上拆分的样式字段，仅保留 styles
 function clearStyleFields(node: SimplifiedNode) {
-  node.layout = undefined;
+  // node.layout = undefined;
   node.fills = undefined;
   node.textStyle = undefined;
   node.strokes = undefined;
@@ -67,4 +67,6 @@ function clearStyleFields(node: SimplifiedNode) {
   node.opacity = undefined;
   node.borderRadius = undefined;
   node.transform = undefined;
+  node.blendMode = undefined;
+  node.visible = undefined;
 }

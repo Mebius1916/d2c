@@ -1,6 +1,9 @@
 export function toCssColor(color: any): string {
   if (!color) return "transparent";
   if (typeof color === "string") return color;
+  if (typeof color === "object" && color.type === "SOLID" && color.color) {
+    return typeof color.color === "string" ? color.color : toCssColor(color.color);
+  }
   if (typeof color === "object" && "r" in color) {
     const r = Math.round(color.r * 255);
     const g = Math.round(color.g * 255);

@@ -57,5 +57,7 @@ export function buildNodeStyle(node: SimplifiedNode): Record<string, string | nu
     ...(typeof node.opacity === "number" ? { opacity: node.opacity } : {}),
     ...(node.borderRadius ? { borderRadius: node.borderRadius } : {}),
     ...(node.transform ? { transform: node.transform } : {}),
+    ...(node.blendMode ? { blendMode: node.blendMode } : {}),
+    ...(node.visible === false ? { visibility: "hidden" } : {}),
   };
 }

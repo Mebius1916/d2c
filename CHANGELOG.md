@@ -1,5 +1,63 @@
 # 更新日志 (CHANGELOG)
 
+## [v0.1.15] - 2026-02-22
+
+### 抽取管线与 codegen 系列升级
+
+> **涉及文件**:
+>
+> - `core/extractors/pipeline/design-extractor.ts` (改造: 支持图像/SVG 资源回填与重建参数)
+> - `core/extractors/pipeline/reconstruction.ts` (新增: 阶段开关与分步执行)
+> - `core/extractors/pipeline/utils/image-assets.ts` (新增: 图片/SVG 资源回填)
+> - `core/extractors/pipeline/utils/parse-api.ts` (拆分: API 解析逻辑)
+> - `core/extractors/algorithms/occlusion.ts` (优化: 透明填充判断)
+> - `core/extractors/algorithms/flattening.ts` (优化: 尺寸一致时允许折叠)
+> - `core/extractors/attributes/visuals-extractor.ts` (新增: blendMode/visible 输出)
+> - `core/types/extractor-types.ts` / `core/types/simplified-types.ts` (扩展: layout/text/paint/visibility/blendMode)
+> - `core/codegen/index.ts` / `core/codegen/context/index.ts` (新增: 统一入口与上下文)
+> - `core/codegen/html/*` (增强: 富文本 tag、内联 SVG 组合)
+> - `core/codegen/css/*` (增强: 背景层、描边对齐、颜色解析)
+> - `core/transformers/*` (增强: 图片 scaleMode/文本样式/渐变工具)
+> - `main.ts` (调整: 走带资源解析的提取入口)
+
+- **资源回填与阶段控制 (Assets & Steps)**:
+  - **图片/SVG 回填**: 支持 Figma 渲染资源映射到节点与样式。
+  - **阶段开关**: 重建流水线支持按阶段启用/禁用。
+  - **遮挡检测**: 透明填充判定更准确，减少误遮挡。
+- **样式与类型扩展 (Styles & Types)**:
+  - **可见性与混合模式**: 输出 `visible` 与 `blendMode`，并参与节点样式构建。
+  - **布局与文本补齐**: layout 增加尺寸与文本自适应信息，文本补充 OpenType 与 trim 信息。
+- **Codegen 输出增强 (HTML/CSS)**:
+  - **HTML**: 富文本按语义标签输出，SVG 支持组合渲染。
+  - **CSS**: 背景图层、混合模式、描边对齐与多重边框处理优化。
+- **冗余折叠优化 (Flatten Redundant)**:
+  - **放宽条件**: 仅尺寸 layout 且边界与子节点一致时允许折叠。
+  - **安全边界**: 仍保留 padding/gap/对齐/定位/滚动等布局影响的阻断条件。
+
+## [v0.1.14] - 2026-02-20
+
+### 文本样式对齐与 codegen 入口收敛
+
+> **涉及文件**:
+>
+> - `core/transformers/text.ts` (增强: 富文本分段附带 effects 与样式归一)
+> - `core/transformers/utils/text-utils.ts` (新增: 行高/字距/变量名解析工具)
+> - `core/extractors/attributes/text-extractor.ts` (调整: richText 兜底分段补充 effects)
+> - `core/codegen/css/utils/text-style.ts` (增强: 段落 effects 参与 styleId 合成)
+> - `core/codegen/html/index.ts` (新增: generateHTMLParts 拆分)
+> - `core/codegen/context/index.ts` (新增: codegen 上下文构建)
+> - `core/codegen/index.ts` (调整: 唯一 codegen 入口函数)
+> - `run-codegen.ts` (调整: 使用统一 codegen 入口)
+>
+- **文本对齐 (Text Alignment)**:
+  - **行高/字距**: 统一以 px 结果输出，避免百分比导致的渲染不一致。
+  - **富文本 effects**: 每个 segment 合入相同的文本效果，保证拆分后的视觉一致性。
+- **codegen 入口收敛 (Single Entry)**:
+  - **统一入口**: 对外仅暴露 `codegen(design)`，返回 `{ html, css, body, context }`。
+  - **上下文复用**: HTML 与 CSS 共享同一 context，避免样式 id 不一致。
+- **HTML 生成健壮性 (HTML Generation)**:
+  - **可见性过滤**: 生成阶段跳过不可见节点，避免无效 DOM 输出。
+
 ## [v0.1.13] - 2026-02-19
 
 ### 文本与语义推断增强

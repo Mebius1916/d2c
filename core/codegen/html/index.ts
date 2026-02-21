@@ -1,6 +1,7 @@
 
 import type { SimplifiedDesign, SimplifiedNode } from "../../types/extractor-types.js";
-import { createCodegenContext } from "../context.js";
+import type { CodegenContext } from "../context/index.js";
+import { createCodegenContext } from "../context/index.js";
 import { generateCSS } from "../css/index.js";
 import { HtmlNodeBuilder } from "./builders/html-builder.js";
 
@@ -9,12 +10,16 @@ import { HtmlNodeBuilder } from "./builders/html-builder.js";
  * Orchestrates the generation of HTML using HtmlNodeBuilder and modular CSS generation.
  */
 
-export function generateHTML(design: SimplifiedDesign): string {
-  const context = createCodegenContext(design);
-  const bodyContent = design.nodes.map(node => generateNodeRecursive(node, context.globalVars)).join("\n");
-  const css = generateCSS(context);
-
-  return `<!DOCTYPE html>
+export function generateHTMLParts(design: SimplifiedDesign, context?: CodegenContext): {
+  html: string;
+  css: string;
+  body: string;
+  context: CodegenContext;
+} {
+  const ctx = context ?? createCodegenContext(design);
+  const bodyContent = design.nodes.map(node => generateNodeRecursive(node, ctx.globalVars)).join("\n");
+  const css = generateCSS(ctx);
+  const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -34,14 +39,19 @@ export function generateHTML(design: SimplifiedDesign): string {
     ${bodyContent}
 </body>
 </html>`;
+  return { html, css, body: bodyContent, context: ctx };
 }
 
-function generateNodeRecursive(node: SimplifiedNode, globalVars: { styles: Record<string, any>; styleCache?: Map<string, string> }): string {
+function generateNodeRecursive(
+  node: SimplifiedNode,
+  globalVars: { styles: Record<string, any>; styleCache?: Map<string, string> }
+): string {
   const builder = new HtmlNodeBuilder(node, globalVars);
 
   if (node.children && node.children.length > 0) {
     node.children.forEach(child => {
-      builder.addChild(generateNodeRecursive(child, globalVars));
+      const childHtml = generateNodeRecursive(child, globalVars);
+      if (childHtml) builder.addChild(childHtml);
     });
   }
 

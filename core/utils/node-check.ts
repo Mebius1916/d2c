@@ -14,6 +14,10 @@ export function shouldPruneNode(node: SimplifiedNode): boolean {
     return false;
   }
 
+  if (node.visible === false) {
+    return false;
+  }
+
   // 2. Never prune content nodes
   if (node.type === "TEXT" || node.type === "IMAGE" || node.type === "SVG") {
     return false;

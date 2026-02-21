@@ -2,9 +2,7 @@
 import type { SimplifiedTextStyle } from "../../../types/simplified-types.js";
 import { px, toCssColor } from "../utils/css-color.js";
 
-/**
- * Builds CSS styles for Typography properties
- */
+// 文字样式构造器
 export const typographyBuilder = (text: SimplifiedTextStyle): Record<string, string> => {
   const styles: Record<string, string> = {};
 
@@ -29,6 +27,15 @@ export const typographyBuilder = (text: SimplifiedTextStyle): Record<string, str
     }
   }
 
+  if (text.textAlignVertical && text.textAlignVertical !== "TOP") {
+    const alignMap: any = { CENTER: "center", BOTTOM: "flex-end" };
+    if (alignMap[text.textAlignVertical]) {
+      styles["display"] = "flex";
+      styles["flex-direction"] = "column";
+      styles["justify-content"] = alignMap[text.textAlignVertical];
+    }
+  }
+
   if (text.textCase) {
     const caseMap: any = { UPPER: "uppercase", LOWER: "lowercase", TITLE: "capitalize" };
     if (caseMap[text.textCase]) {
@@ -50,6 +57,8 @@ export const typographyBuilder = (text: SimplifiedTextStyle): Record<string, str
     }
   }
 
+  if (text.textBoxTrim) styles["text-box-trim"] = text.textBoxTrim;
+  if (text.textBoxEdge) styles["text-box-edge"] = text.textBoxEdge;
   if (text.color) styles["color"] = toCssColor(text.color);
   styles["word-wrap"] = "break-word";
 

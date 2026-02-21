@@ -1,106 +1,55 @@
 import type {
   GetFileResponse,
   GetFileNodesResponse,
-  Node as FigmaDocumentNode,
-  Component,
-  ComponentSet,
-  Style,
 } from "@figma/rest-api-spec";
 import { simplifyComponents, simplifyComponentSets } from "../../transformers/component.js";
-import type { SimplifiedDesign, TraversalContext, SimplifiedNode } from "../../types/extractor-types.js";
+import type { SimplifiedDesign, TraversalContext } from "../../types/extractor-types.js";
 import { extractFromDesign } from "./node-processor.js";
-import { flattenRedundantNodes } from "../algorithms/flattening.js";
 import { normalizeNodeStyles } from "../algorithms/style-normalization.js";
+import { resolveImageAssetsFromFigma } from "./utils/image-assets.js";
+import type { ReconstructionStepFlags } from "./reconstruction.js";
+import { parseAPIResponse } from "./utils/parse-api.js";
 
 /**
  * Extract a complete SimplifiedDesign from raw Figma API response using extractors.
  */
-export function simplifyRawFigmaObject(
+export async function simplifyRawFigmaObjectWithImages(
   apiResponse: GetFileResponse | GetFileNodesResponse,
-): SimplifiedDesign {
-  // Extract components, componentSets, and raw nodes from API response
+  options: {
+    fileKey: string;
+    token: string;
+    format?: "png" | "jpg" | "svg" | "pdf";
+    scale?: number;
+    reconstruction?: { enabled?: ReconstructionStepFlags };
+  },
+): Promise<SimplifiedDesign> {
   const { metadata, rawNodes, components, componentSets, extraStyles } =
     parseAPIResponse(apiResponse);
 
-  // Process nodes using the flexible extractor system
-  const globalVars: TraversalContext["globalVars"] = { styles: {}, extraStyles };
+  const globalVars: TraversalContext["globalVars"] = {
+    styles: {},
+    extraStyles,
+    imageAssets: { nodeIds: [], imageRefs: [], svgNodeIds: [] },
+  };
   const { nodes: extractedNodes, globalVars: finalGlobalVars } = extractFromDesign(
     rawNodes,
     globalVars,
+    options.reconstruction ? { reconstruction: options.reconstruction } : undefined,
   );
 
-  // 剪枝操作：拍平节点树
-  const optimizedNodes = flattenRedundantNodes(extractedNodes, { styles: finalGlobalVars.styles });
+  // 类名合并优化：将所有节点的 styles 合并为单一 styleId
+  const normalizedNodes = normalizeNodeStyles(extractedNodes, finalGlobalVars);
 
-  // 归一化节点样式：合并所有样式引用为单一 styleId
-  const normalizedNodes = normalizeNodeStyles(optimizedNodes, finalGlobalVars);
-
-  // Return complete design
-  return {
+  const design: SimplifiedDesign = {
     ...metadata,
-    nodes: cleanupNodes(normalizedNodes),
+    nodes: normalizedNodes,
     components: simplifyComponents(components),
     componentSets: simplifyComponentSets(componentSets),
-    globalVars: { styles: finalGlobalVars.styles },
-  };
-}
-
-/**
- * Remove internal properties like visualSignature from nodes before output
- */
-function cleanupNodes(nodes: SimplifiedNode[]): SimplifiedNode[] {
-  return nodes.map(node => {
-    const { visualSignature, ...rest } = node as any;
-    if (rest.children) {
-      rest.children = cleanupNodes(rest.children);
-    }
-    return rest as SimplifiedNode;
-  });
-}
-
-/**
- * Parse the raw Figma API response to extract metadata, nodes, and components.
- */
-function parseAPIResponse(data: GetFileResponse | GetFileNodesResponse) {
-  const aggregatedComponents: Record<string, Component> = {};
-  const aggregatedComponentSets: Record<string, ComponentSet> = {};
-  let extraStyles: Record<string, Style> = {};
-  let nodesToParse: Array<FigmaDocumentNode>;
-
-  if ("nodes" in data) {
-    // GetFileNodesResponse
-    const nodeResponses = Object.values(data.nodes);
-    nodeResponses.forEach((nodeResponse) => {
-      if (nodeResponse.components) {
-        Object.assign(aggregatedComponents, nodeResponse.components);
-      }
-      if (nodeResponse.componentSets) {
-        Object.assign(aggregatedComponentSets, nodeResponse.componentSets);
-      }
-      if (nodeResponse.styles) {
-        Object.assign(extraStyles, nodeResponse.styles);
-      }
-    });
-    nodesToParse = nodeResponses.map((n) => n.document);
-  } else {
-    // GetFileResponse
-    Object.assign(aggregatedComponents, data.components);
-    Object.assign(aggregatedComponentSets, data.componentSets);
-    if (data.styles) {
-      extraStyles = data.styles;
-    }
-    nodesToParse = data.document.children;
-  }
-
-  const { name } = data;
-
-  return {
-    metadata: {
-      name,
+    globalVars: {
+      styles: finalGlobalVars.styles,
+      imageAssets: finalGlobalVars.imageAssets,
     },
-    rawNodes: nodesToParse,
-    extraStyles,
-    components: aggregatedComponents,
-    componentSets: aggregatedComponentSets,
   };
+
+  return resolveImageAssetsFromFigma(design, options);
 }

@@ -13,7 +13,7 @@ export function formatStyleBody(style: any, stylesMap: Record<string, any> = {})
     .join("; ") + (Object.keys(styles).length > 0 ? ";" : "");
 }
 
-// 基于全局样式表生成所有 class 的 CSS 规则
+// 解析全局样式表，生成所有 class 的 CSS 规则
 export function generateGlobalCSS(globalVars: Record<string, any>): string {
   const styles = globalVars.styles || {};
   let css = "";
@@ -39,6 +39,12 @@ function nodeStyleBuilder(style: any): Record<string, string> {
   if (style.transform) {
     styles["transform"] = style.transform;
   }
+  if (style.blendMode) {
+    styles["mix-blend-mode"] = style.blendMode;
+  }
+  if (style.visibility) {
+    styles["visibility"] = style.visibility;
+  }
   return styles;
 }
 
@@ -52,6 +58,7 @@ function effectsStyleBuilder(style: any): Record<string, string> {
   return styles;
 }
 
+// toRead
 const styleHandlers: Array<{
   match: (style: any) => boolean;
   build: (style: any) => Record<string, string>;
@@ -68,9 +75,21 @@ const styleHandlers: Array<{
     build: typographyBuilder,
   },
   { match: (style) => Array.isArray(style), build: visualBuilder.fills },
-  { match: (style) => style && "colors" in style && "strokeWeight" in style, build: visualBuilder.strokes },
   {
-    match: (style) => style && ("opacity" in style || "borderRadius" in style || "transform" in style),
+    match: (style) =>
+      style &&
+      "colors" in style &&
+      ("strokeWeight" in style || "strokeWeights" in style || "strokeAlign" in style || "strokeDashes" in style),
+    build: visualBuilder.strokes,
+  },
+  {
+    match: (style) =>
+      style &&
+      ("opacity" in style ||
+        "borderRadius" in style ||
+        "transform" in style ||
+        "blendMode" in style ||
+        "visibility" in style),
     build: nodeStyleBuilder,
   },
   {

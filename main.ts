@@ -2,7 +2,7 @@ import type {
   GetFileResponse,
   GetFileNodesResponse,
 } from "@figma/rest-api-spec";
-import { simplifyRawFigmaObject } from "./core/extractors/pipeline/design-extractor.js";
+import { simplifyRawFigmaObjectWithImages } from "./core/extractors/pipeline/design-extractor.js";
 import type { SimplifiedDesign } from "./core/types/extractor-types.js";
 
 /**
@@ -12,9 +12,14 @@ import type { SimplifiedDesign } from "./core/types/extractor-types.js";
  * @param figmaData - The raw response from Figma API (GET /v1/files/:key)
  * @returns SimplifiedDesign - Cleaned, structured data ready for LLM or Code Gen
  */
-export function extractFigmaAsJSON(
+export async function extractFigmaAsJSON(
   figmaData: GetFileResponse | GetFileNodesResponse,
-): SimplifiedDesign {
-  // Use the "Full Blood" configuration with all extractors enabled
-  return simplifyRawFigmaObject(figmaData);
+  options: {
+    fileKey: string;
+    token: string;
+    format?: "png" | "jpg" | "svg" | "pdf";
+    scale?: number,
+  },
+): Promise<SimplifiedDesign> {
+  return simplifyRawFigmaObjectWithImages(figmaData, options);
 }

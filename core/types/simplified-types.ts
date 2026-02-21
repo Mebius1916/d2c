@@ -1,5 +1,4 @@
 import type { Transform } from "@figma/rest-api-spec";
-import type { CSSRGBAColor, CSSHexColor } from "../utils/identity.js";
 
 /* -------------------------------------------------------------------------- */
 /*                                Layout Types                                */
@@ -7,11 +6,16 @@ import type { CSSRGBAColor, CSSHexColor } from "../utils/identity.js";
 
 export interface SimplifiedLayout {
   mode: "none" | "row" | "column";
+  parentMode?: "none" | "row" | "column";
   justifyContent?: "flex-start" | "flex-end" | "center" | "space-between" | "baseline" | "stretch";
   alignItems?: "flex-start" | "flex-end" | "center" | "space-between" | "baseline" | "stretch";
   alignSelf?: "flex-start" | "flex-end" | "center" | "stretch";
   wrap?: boolean;
   gap?: string;
+  minWidth?: number;
+  maxWidth?: number;
+  minHeight?: number;
+  maxHeight?: number;
   locationRelativeToParent?: {
     x: number;
     y: number;
@@ -28,6 +32,9 @@ export interface SimplifiedLayout {
   };
   overflowScroll?: ("x" | "y")[];
   position?: "absolute";
+  textAutoResize?: "WIDTH_AND_HEIGHT" | "HEIGHT" | "NONE" | "TRUNCATE";
+  textTruncation?: string;
+  maxLines?: number;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -45,6 +52,12 @@ export interface SimplifiedTextStyle {
   fontStyle?: string;
   textAlignHorizontal?: string;
   textAlignVertical?: string;
+  openTypeFeatures?: {
+    SUBS?: boolean;
+    SUPS?: boolean;
+  };
+  textBoxTrim?: string;
+  textBoxEdge?: string;
   color?: any; // CSSColor or string
   richText?: {
     text: string;
@@ -63,6 +76,7 @@ export interface SimplifiedImageFill {
   type: "IMAGE";
   imageRef: string;
   scaleMode: "FILL" | "FIT" | "TILE" | "STRETCH";
+  blendMode?: string;
   /**
    * For TILE mode, the scaling factor relative to original image size
    */
@@ -88,6 +102,7 @@ export interface SimplifiedImageFill {
 export interface SimplifiedGradientFill {
   type: "GRADIENT_LINEAR" | "GRADIENT_RADIAL" | "GRADIENT_ANGULAR" | "GRADIENT_DIAMOND";
   gradient: string;
+  blendMode?: string;
 }
 
 export interface SimplifiedPatternFill {
@@ -95,16 +110,26 @@ export interface SimplifiedPatternFill {
   patternSource: {
     type: "IMAGE-PNG";
     nodeId: string;
+    url?: string;
   };
   backgroundRepeat: string;
   backgroundSize: string;
   backgroundPosition: string;
+  blendMode?: string;
+}
+
+export interface SimplifiedSolidFill {
+  type: "SOLID";
+  color: string;
+  blendMode?: string;
 }
 
 export interface SimplifiedNodeStyle {
   opacity?: number;
   borderRadius?: string;
   transform?: string;
+  blendMode?: string;
+  visibility?: string;
 }
 
 export interface SimplifiedCompositeStyle {
@@ -120,16 +145,17 @@ export interface BoundingBox {
 
 export type SimplifiedFill =
   | SimplifiedImageFill
+  | SimplifiedSolidFill
   | SimplifiedGradientFill
   | SimplifiedPatternFill
-  | CSSRGBAColor
-  | CSSHexColor;
+  | string;
 
 export interface SimplifiedStroke {
   colors: SimplifiedFill[];
   strokeWeight?: string;
   strokeDashes?: number[];
   strokeWeights?: string;
+  strokeAlign?: "INSIDE" | "CENTER" | "OUTSIDE";
 }
 
 export interface SimplifiedVectorPath {

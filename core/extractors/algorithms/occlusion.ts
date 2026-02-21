@@ -2,8 +2,13 @@ import type { SimplifiedNode } from "../../types/extractor-types.js";
 import { subtractRect, getNodeBoundingBox } from "../../utils/geometry.js";
 import { hasVisibleStyles } from "../../utils/node-check.js";
 import type { BoundingBox } from "../../types/simplified-types.js";
+import type { TraversalContext } from "../../types/extractor-types.js";
+import { resolveNodeFills, isTransparentFillArray } from "./utils/check-fills.js";
 
-export function removeOccludedNodes(nodes: SimplifiedNode[]): SimplifiedNode[] {
+export function removeOccludedNodes(
+  nodes: SimplifiedNode[],
+  globalVars?: TraversalContext["globalVars"]
+): SimplifiedNode[] {
   if (nodes.length === 0) return [];
 
   const visibleNodes: SimplifiedNode[] = []; // 有效节点
@@ -42,7 +47,7 @@ export function removeOccludedNodes(nodes: SimplifiedNode[]): SimplifiedNode[] {
       visibleNodes.unshift(node);
 
       // 加入遮罩层
-      if (isOpaque(node)) {
+      if (isOpaque(node, globalVars)) {
         occluders.push(rect);
       }
     }
@@ -87,7 +92,7 @@ function hasVisibleContentInRegions(node: SimplifiedNode, regions: BoundingBox[]
 }
 
 // Check if node is opaque (blocks vision)
-function isOpaque(node: SimplifiedNode): boolean {
+function isOpaque(node: SimplifiedNode, globalVars?: TraversalContext["globalVars"]): boolean {
   // 1. Type Check: Non-rectangular shapes are never opaque occluders
   if (node.type === "TEXT" || node.type === "SVG") return false;
   
@@ -98,7 +103,11 @@ function isOpaque(node: SimplifiedNode): boolean {
   if (node.type === "IMAGE") return true;
 
   // 4. Fill Check: Must have a visible fill
-  if (!node.fills || node.fills === "transparent") return false;
+  const fills = resolveNodeFills(node, globalVars);
+  if (!fills || fills === "transparent") return false;
+  if (Array.isArray(fills)) {
+    if (isTransparentFillArray(fills)) return false;
+  }
 
   // 5. Border Radius Check: Must be a sharp rectangle
   if (node.borderRadius && node.borderRadius !== "0px" && node.borderRadius !== "0") return false;

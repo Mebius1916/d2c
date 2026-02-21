@@ -27,6 +27,11 @@ export type StyleTypes =
 export interface GlobalVars {
   styles: Record<string, StyleTypes>;
   styleCache?: Map<string, string>;
+  imageAssets?: {
+    nodeIds: string[];
+    imageRefs: string[];
+    svgNodeIds?: string[];
+  };
 }
 
 export interface TraversalContext {
@@ -62,6 +67,8 @@ export interface SimplifiedNode {
   name: string;
   type: "SVG" | "TEXT" | "CONTAINER" | "IMAGE";
   src?: string; // For IMAGE nodes
+  svg?: string;
+  visible?: boolean;
   // Geometry for occlusion detection
   absRect?: {
     x: number;
@@ -74,6 +81,7 @@ export interface SimplifiedNode {
   richText?: {
     text: string;
     style: SimplifiedTextStyle;
+    effects?: SimplifiedEffects;
   }[];
   // appearance
   fills?: string;
@@ -88,8 +96,7 @@ export interface SimplifiedNode {
   borderRadius?: string;
   rotation?: number; // degrees
   transform?: string; // css transform string
-  // Vector Paths (for SVG)
-  vectorPaths?: string[]; // SVG path data strings
+  blendMode?: string;
   // layout & alignment
   layout?: string;
   layoutMode?: "absolute" | "relative"; // Inferred layout positioning

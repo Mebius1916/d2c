@@ -1,6 +1,12 @@
 import type { ExtractorFn, SimplifiedNode } from "../../types/extractor-types.js";
-import { extractRichTextSegments, extractTextStyle, hasTextStyle, isTextNode } from "../../transformers/text.js";
 import { findOrCreateVar, getStyleName } from "../../utils/style-helper.js";
+import { 
+  buildTextEffectsFromNode, 
+  extractRichTextSegments, 
+  extractTextStyle, 
+  hasTextStyle, 
+  isTextNode 
+} from "../../transformers/text.js";
 
 /**
  * Extracts text content and text styling from a node.
@@ -15,7 +21,9 @@ export const textExtractor: ExtractorFn = (node, context) => {
     let richText = textStyle ? extractRichTextSegments(node, baseStyle) : undefined;
     if (!richText) {
       const text = (node as any).characters as string | undefined;
-      richText = text ? [{ text, style: baseStyle }] : undefined;
+      const sharedEffects = buildTextEffectsFromNode(node);
+      const effects = Object.keys(sharedEffects).length ? sharedEffects : undefined;
+      richText = text ? [{ text, style: baseStyle, effects }] : undefined;
     }
     if (richText) {
       result.richText = richText;

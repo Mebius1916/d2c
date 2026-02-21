@@ -1,21 +1,27 @@
 import type { SimplifiedNode } from "../../../types/extractor-types.js";
+import type { SimplifiedEffects } from "../../../types/simplified-types.js";
 import { resolveStyleObject } from "../builders/css-builder.js";
 import { findOrCreateVar } from "../../../utils/style-helper.js";
 
 export function getTextSegmentStyleId(
   segmentStyle: any,
   node: SimplifiedNode,
-  globalVars?: { styles: Record<string, any>; styleCache?: Map<string, string> }
+  globalVars?: { styles: Record<string, any>; styleCache?: Map<string, string> },
+  segmentEffects?: SimplifiedEffects
 ): string | undefined {
   if (!globalVars) return undefined;
   const segmentStyleId = segmentStyle
     ? findOrCreateVar(globalVars as any, segmentStyle as any, "text")
     : undefined;
   const effectStyleId = getTextEffectStyleId(node, globalVars);
-  if (segmentStyleId && effectStyleId) {
-    return findOrCreateVar(globalVars as any, { refs: [segmentStyleId, effectStyleId] } as any, "style");
+  const segmentEffectId = segmentEffects
+    ? findOrCreateVar(globalVars as any, segmentEffects as any, "effect")
+    : undefined;
+  const refs = [segmentStyleId, effectStyleId, segmentEffectId].filter(Boolean) as string[];
+  if (refs.length > 1) {
+    return findOrCreateVar(globalVars as any, { refs } as any, "style");
   }
-  return segmentStyleId || effectStyleId;
+  return refs[0];
 }
 
 function getTextEffectStyleId(
